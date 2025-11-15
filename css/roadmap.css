@@ -1,0 +1,291 @@
+:root {
+  --primary: #45a049;
+  --primary-dark: #378039;
+  --primary-light: #6bbd6e;
+  --background: #ffffff;
+  --card: #ffffff;
+  --text: #2c3e50;
+  --text-light: #666666;
+  --border: #e0e0e0;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: var(--background);
+  background-image: 
+    linear-gradient(45deg, rgba(69, 160, 73, 0.05) 25%, transparent 25%),
+    linear-gradient(-45deg, rgba(69, 160, 73, 0.05) 25%, transparent 25%);
+  background-size: 60px 60px;
+  min-height: 100vh;
+  color: var(--text);
+  line-height: 1.6;
+  padding: 2rem 1rem;
+}
+
+.roadmap-container {
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 2rem;
+  position: relative;
+}
+
+.roadmap-title {
+  text-align: center;
+  font-size: 3rem;
+  font-weight: 800;
+  margin-bottom: 4rem;
+  position: relative;
+  color: var(--primary);
+}
+
+.roadmap-title::after {
+  content: "";
+  position: absolute;
+  bottom: -1rem;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100px;
+  height: 4px;
+  background: var(--primary);
+  border-radius: 2px;
+}
+
+.roadmap-tree {
+  position: relative;
+  padding: 2rem 0;
+}
+
+.roadmap-tree::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 2px;
+  height: 100%;
+  background: var(--primary);
+  opacity: 0.3;
+}
+
+.roadmap-step {
+  position: relative;
+  margin: 4rem 0;
+  width: calc(50% - 2rem);
+  padding: 2rem;
+  background: var(--card);
+  border-radius: 1rem;
+  box-shadow: 0 0 20px rgba(69, 160, 73, 0.1);
+  animation: fadeIn 0.5s ease-out forwards;
+  opacity: 0;
+  border: 2px solid var(--primary);
+}
+
+.roadmap-step:nth-child(odd) {
+  margin-left: auto;
+  transform-origin: left center;
+}
+
+.roadmap-step:nth-child(even) {
+  margin-right: auto;
+  transform-origin: right center;
+}
+
+.roadmap-step::before {
+  content: "";
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  background: var(--primary);
+  border-radius: 50%;
+  top: 50%;
+  transform: translateY(-50%);
+  box-shadow: 0 0 0 4px rgba(69, 160, 73, 0.2);
+}
+
+.roadmap-step:nth-child(odd)::before {
+  left: -3rem;
+}
+
+.roadmap-step:nth-child(even)::before {
+  right: -3rem;
+}
+
+.roadmap-step::after {
+  content: "";
+  position: absolute;
+  width: 2rem;
+  height: 2px;
+  background: var(--primary);
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.roadmap-step:nth-child(odd)::after {
+  left: -2rem;
+}
+
+.roadmap-step:nth-child(even)::after {
+  right: -2rem;
+}
+
+.roadmap-step p {
+  font-size: 1.1rem;
+  color: var(--text);
+  margin-bottom: 1.5rem;
+}
+
+.roadmap-step a {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: var(--primary);
+  color: white;
+  padding: 0.75rem 1.5rem;
+  border-radius: 0.5rem;
+  text-decoration: none;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.roadmap-step a::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(45deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  transform: translateX(-100%);
+  transition: 0.5s;
+}
+
+.roadmap-step a:hover::before {
+  transform: translateX(100%);
+}
+
+.roadmap-step a:hover {
+  background: var(--primary-dark);
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(69, 160, 73, 0.3);
+}
+
+.save-roadmap-button {
+  display: block;
+  margin: 3rem auto 0;
+  padding: 1rem 2.5rem;
+  font-size: 1.1rem;
+  font-weight: 600;
+  background: var(--primary);
+  color: white;
+  border: none;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.save-roadmap-button:hover {
+  background: var(--primary-dark);
+  transform: translateY(-2px);
+  box-shadow: 0 5px 20px rgba(69, 160, 73, 0.3);
+}
+
+.save-roadmap-button::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(45deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  transform: translateX(-100%);
+  transition: 0.5s;
+}
+
+.save-roadmap-button:hover::before {
+  transform: translateX(100%);
+}
+
+.loading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 200px;
+  font-size: 1.2rem;
+  color: var(--text-light);
+  gap: 0.5rem;
+}
+
+.loading::after {
+  content: "";
+  width: 20px;
+  height: 20px;
+  border: 3px solid var(--border);
+  border-top-color: var(--primary);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.notification {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  background: var(--primary);
+  color: white;
+  padding: 1rem 2rem;
+  border-radius: 0.5rem;
+  box-shadow: 0 5px 15px rgba(69, 160, 73, 0.3);
+  transform: translateY(100px);
+  animation: slideUp 0.3s forwards;
+}
+
+@keyframes slideUp {
+  to { transform: translateY(0); }
+}
+
+@media (max-width: 768px) {
+  .roadmap-tree::before {
+    left: 1rem;
+  }
+
+  .roadmap-step {
+    width: calc(100% - 3rem);
+    margin-left: 3rem !important;
+  }
+
+  .roadmap-step::before {
+    left: -2rem !important;
+  }
+
+  .roadmap-step::after {
+    left: -1rem !important;
+    width: 1rem !important;
+  }
+
+  .roadmap-title {
+    font-size: 2rem;
+  }
+}
