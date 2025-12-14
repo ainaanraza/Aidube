@@ -1,16 +1,35 @@
 import { GoogleGenerativeAI } from "https://cdn.jsdelivr.net/npm/@google/generative-ai/+esm";
 
-const API_KEY = "AIzaSyDTDbXBVwlnC4uAot8ge4-RAFPYWHCjDO4";
+const API_KEY = "AIzaSyBAymnNctjlkQG4HaYj4sAv3H0VE9g6hgA";
 
 // small helper to query single element
 const $ = (sel) => document.querySelector(sel);
+
+// sanitise/remove Markdown emphasis/backticks and stray asterisks
+function sanitizeText(s) {
+  if (!s) return "";
+  // remove leading bullets/numbers, then remove markdown markers anywhere
+  return s
+    .replace(/^[\s\-\*\d\.\)]+/, "")   // strip leading bullets/numbers/asterisks
+    .replace(/[`*_]{1,}/g, "")         // remove `, *, _, **, __ etc.
+    .trim();
+}
+
 
 // Wait for DOM to be ready, then wire event listeners
 document.addEventListener("DOMContentLoaded", () => {
   const params = new URLSearchParams(window.location.search);
   const topic = params.get("topic");
-  const topicTitleEl = $("#topicTitle");
+  const topicTitleEl = document.querySelector("#topicTitle");
   if (topicTitleEl) topicTitleEl.textContent = topic || "Unknown Topic";
+
+  const savedRoadmaps = JSON.parse(localStorage.getItem("savedRoadmaps") || "[]");
+  const existing = savedRoadmaps.find(r => r.topic === topic);
+  if (existing && existing.steps?.length) {
+    renderSavedRoadmap(existing.topic, existing.steps);
+    return; // stop here — don’t re-generate
+  }
+
   if (topic) populateTopics(topic);
 
   // Toggle the "previously known" topics container
@@ -35,6 +54,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 });
 
+
 // Fetch related subtopics dynamically using Gemini
 async function fetchRelatedTopics(mainTopic) {
   try {
@@ -42,7 +62,9 @@ async function fetchRelatedTopics(mainTopic) {
     const level = levelEl ? levelEl.value : "beginner";
 
     const genAI = new GoogleGenerativeAI(API_KEY);
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    const preferredModel = "gemini-2.5-flash"; // or dynamically chosen from listModels()
+const model = genAI.getGenerativeModel({ model: preferredModel });
+
 
     // Stronger prompt to ensure relevant & capped topics
     const prompt = `List the 10 most important subtopics for learning "${mainTopic}" at a ${level} level.
@@ -58,7 +80,7 @@ Return ONLY the subtopic names, one per line, no numbering, no explanations.`;
     // Flexible parsing: handle lists, commas, bullets
     let topics = raw
       .split(/\r?\n|,|;|-/)             
-      .map(t => t.replace(/^[\s\d\.\)\-\*]+/, "").trim()) 
+      .map(t => t.replace(/^[\s\d\.\)\-\*]+/, "").replace(/[`*_]{1,}/g, "").trim()) 
       .filter(t => t.length > 0);
 
     // Retry if Gemini gave fewer than 5
@@ -84,6 +106,38 @@ Only names, one per line, no numbering, no extra text.`;
 }
 
 
+// call the models listing (v1beta) to see what model names the API currently exposes
+async function listModels() {
+  const url = "https://generativelanguage.googleapis.com/v1beta/models?key=" + API_KEY;
+  const res = await fetch(url, {
+    headers: { "x-goog-api-key": API_KEY, "Content-Type": "application/json" }
+  });
+  if (!res.ok) {
+    const txt = await res.text();
+    throw new Error(`ListModels failed: ${res.status} ${txt}`);
+  }
+  const json = await res.json();
+  // json.models is the array of available model metadata (inspect it in console)
+  console.log("Available models:", json.models);
+  return json.models || [];
+}
+
+async function pickModel(preferred = ["gemini-2.5-flash","gemini-flash-latest","gemini-2.5-flash-lite"]) {
+  try {
+    const models = await listModels();
+    // model entries vary, but each has a 'name' or 'model' field; be flexible:
+    const names = models.map(m => m.name || m.model || m.modelId || "").filter(Boolean);
+    for (const p of preferred) {
+      const found = names.find(n => n.includes(p));
+      if (found) return found;
+    }
+    // fallback: first model that supports generateContent (inspect model metadata)
+    return names[0] || null;
+  } catch (e) {
+    console.warn("Could not list models:", e);
+    return null;
+  }
+}
 
 
 // Populate checkboxes dynamically
@@ -103,7 +157,11 @@ async function populateTopics(mainTopic) {
   topics.forEach(topic => {
     const label = document.createElement("label");
     label.style.marginRight = "1rem";
-    label.innerHTML = `<input type="checkbox" value="${topic}"> ${topic}`;
+    const input = document.createElement("input");
+    input.type = "checkbox";
+    input.value = topic;
+    label.appendChild(input);
+    label.appendChild(document.createTextNode(" " + topic));
     container.appendChild(label);
   });
 }
@@ -139,7 +197,8 @@ async function generateRoadmap(topic) {
 
     // Call the generative model
     const genAI = new GoogleGenerativeAI(API_KEY);
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    const preferredModel = "gemini-2.5-flash"; // or dynamically chosen from listModels()
+const model = genAI.getGenerativeModel({ model: preferredModel });
     const result = await model.generateContent(prompt);
     const response = await result.response.text();
 
@@ -157,9 +216,10 @@ async function generateRoadmap(topic) {
 
     // Parse into steps (strip leading bullets/numbers and empty lines)
     const steps = responseText
-      .split(/\r?\n/)
-      .map(s => s.replace(/^[\s\-\*\d\.\)]+/, "").trim())
-      .filter(s => s !== "");
+  .split(/\r?\n/)
+  .map(sanitizeText)
+  .filter(s => s !== "");
+
 
     // Build DOM
     const roadmapTree = document.createElement("div");
@@ -167,7 +227,7 @@ async function generateRoadmap(topic) {
 
     steps.forEach((step, index) => {
       const isMainTopic = !step.startsWith("-");
-      const mainTopic = step.split(":")[0].trim();
+      const mainTopic = sanitizeText(step.split(":")[0]);
 
       const roadmapStep = document.createElement("div");
       roadmapStep.className = "roadmap-step";
@@ -222,4 +282,30 @@ function saveRoadmap(topic, steps) {
     notification.style.transform = "translateY(100px)";
     setTimeout(() => notification.remove(), 300);
   }, 3000);
+}
+
+function renderSavedRoadmap(topic, steps) {
+  const roadmapContainer = document.getElementById("roadmapContent");
+  roadmapContainer.innerHTML = "";
+
+  const roadmapTree = document.createElement("div");
+  roadmapTree.className = "roadmap-tree";
+
+  steps.forEach((step, index) => {
+    const roadmapStep = document.createElement("div");
+    roadmapStep.className = "roadmap-step";
+    roadmapStep.style.animationDelay = `${index * 0.1}s`;
+    roadmapStep.innerHTML = `
+      <p>${step}</p>
+      <a href="index.html?search=${encodeURIComponent(step.split(":")[0])}">
+        Explore Playlist
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M5 12h14M12 5l7 7-7 7"/>
+        </svg>
+      </a>
+    `;
+    roadmapTree.appendChild(roadmapStep);
+  });
+
+  roadmapContainer.appendChild(roadmapTree);
 }

@@ -25,11 +25,13 @@ function renderLastPlayed() {
   if (lastPlayedVideo) {
     const thumbnailUrl = `https://img.youtube.com/vi/${lastPlayedVideo.videoId}/hqdefault.jpg`;
     container.innerHTML = `
-      <div class="last-played">
-        <img src="${thumbnailUrl}" alt="${lastPlayedVideo.title}">
-        <div class="playlist-content">
-          <div class="playlist-title">Last Played: ${lastPlayedVideo.title}</div>
-          <button onclick="resumeLastPlayed()">
+      <div class="last-played compact-last">
+        <div class="last-thumb">
+          <img src="${thumbnailUrl}" alt="${lastPlayedVideo.title}">
+        </div>
+        <div class="last-info">
+          <div class="last-title">${lastPlayedVideo.title}</div>
+          <button class="last-resume-btn" onclick="resumeLastPlayed()">
             <i class="fas fa-play"></i> Resume
           </button>
         </div>
@@ -40,6 +42,7 @@ function renderLastPlayed() {
   }
 }
 
+
 function updateLectureHistory() {
   const historyDiv = document.getElementById("lectureHistory");
   historyDiv.innerHTML = lectureHistory.length
@@ -49,9 +52,6 @@ function updateLectureHistory() {
         <div>
           <button onclick="redirectToPlaylistPage('${item.id}', '${item.title}')">View</button>
           <button onclick="removeLectureHistory(${index})">Delete</button>
-          <div/>
-          <br>
-          <div>
           <button onclick="savePlaylist('${item.title}', '${item.id}')">Save</button>
           </div>
         </div>
@@ -85,38 +85,58 @@ function fetchPlaylists() {
   const url = `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${searchQuery}&type=playlist&key=${apiKey}&maxResults=50`;
 
   const container = document.getElementById("playlistContainer");
-  container.innerHTML = "";
+  container.innerHTML = "<p>Loading playlists...</p>";
 
   fetch(url)
     .then(response => response.json())
     .then(data => {
-      data.items.forEach(item => {
-        const thumbnail = item.snippet.thumbnails.high?.url || item.snippet.thumbnails.default.url;
-        const playlistTitle = item.snippet.title;
-        const channelTitle = item.snippet.channelTitle;
+      if (!data.items || data.items.length === 0) {
+        container.innerHTML = "<p>No playlists found.</p>";
+        return;
+      }
 
-        const playlistElement = document.createElement("div");
-        playlistElement.className = "playlist-item";
-        playlistElement.innerHTML = `
-          <img src="${thumbnail}" alt="${playlistTitle}" class="playlist-thumbnail">
-          <div class="playlist-content">
-            <div class="playlist-title">${playlistTitle}</div>
-            <div class="playlist-channel">${channelTitle}</div>
-            <div class="playlist-buttons">
-              <button onclick="redirectToPlaylistPage('${item.id.playlistId}', '${playlistTitle}')">
-                <i class="fas fa-play"></i> View
-              </button>
-              <button onclick="savePlaylist('${playlistTitle}', '${item.id.playlistId}')">
-                <i class="fas fa-bookmark"></i> Save
-              </button>
-            </div>
-          </div>
-        `;
-        container.appendChild(playlistElement);
-      });
+
+      localStorage.setItem("lastSearchQuery", searchQuery);
+      localStorage.setItem("lastSearchResults", JSON.stringify(data.items));
+
+      renderPlaylists(data.items);
     })
-    .catch(error => console.error("Error fetching playlists:", error));
+    .catch(error => {
+      console.error("Error fetching playlists:", error);
+      container.innerHTML = `<p>Error fetching playlists: ${error.message}</p>`;
+    });
 }
+
+function renderPlaylists(playlists) {
+  const container = document.getElementById("playlistContainer");
+  container.innerHTML = "";
+
+  playlists.forEach(item => {
+    const thumbnail = item.snippet.thumbnails.high?.url || item.snippet.thumbnails.default.url;
+    const playlistTitle = item.snippet.title;
+    const channelTitle = item.snippet.channelTitle;
+
+    const playlistElement = document.createElement("div");
+    playlistElement.className = "playlist-item";
+    playlistElement.innerHTML = `
+      <img src="${thumbnail}" alt="${playlistTitle}" class="playlist-thumbnail">
+      <div class="playlist-content">
+        <div class="playlist-title">${playlistTitle}</div>
+        <div class="playlist-channel">${channelTitle}</div>
+        <div class="playlist-buttons">
+          <button onclick="redirectToPlaylistPage('${item.id.playlistId}', '${playlistTitle}')">
+            <i class="fas fa-play"></i> View
+          </button>
+          <button onclick="savePlaylist('${playlistTitle}', '${item.id.playlistId}')">
+            <i class="fas fa-bookmark"></i> Save
+          </button>
+        </div>
+      </div>
+    `;
+    container.appendChild(playlistElement);
+  });
+}
+
 
 function resumeLastPlayed() {
   if (lastPlayedVideo) {
@@ -181,12 +201,12 @@ function updateSavedRoadmaps() {
     : "<p>No saved roadmaps available.</p>";
 }
 
-// Function to view a saved roadmap
+//  view a saved roadmap
 function viewSavedRoadmap(topic) {
   window.location.href = `roadmap.html?topic=${encodeURIComponent(topic)}`;
 }
 
-// Function to delete a saved roadmap
+//   delete a saved roadmap
 function deleteSavedRoadmap(index) {
   const savedRoadmaps = JSON.parse(localStorage.getItem("savedRoadmaps")) || [];
   savedRoadmaps.splice(index, 1); // Remove the roadmap at the specified index
@@ -194,11 +214,24 @@ function deleteSavedRoadmap(index) {
   updateSavedRoadmaps(); // Refresh the displayed roadmaps
 }
 
-// Function to clear all saved roadmaps
+//   clear all saved roadmaps
 function clearAllRoadmaps() {
   localStorage.removeItem("savedRoadmaps"); // Remove all saved roadmaps
   updateSavedRoadmaps(); // Refresh the displayed roadmaps
 }
+
+const activeQuery = params.get("search");
+
+if (!activeQuery) {
+  const savedResults = localStorage.getItem("lastSearchResults");
+  const savedQuery = localStorage.getItem("lastSearchQuery");
+
+  if (savedResults && savedQuery) {
+    document.getElementById("searchInput").value = savedQuery;
+    renderPlaylists(JSON.parse(savedResults));
+  }
+}
+
 
 updateLectureHistory();
 updateSavedPlaylists();

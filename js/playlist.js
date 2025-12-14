@@ -6,13 +6,13 @@ const lastVideoId = urlParams.get('videoId');
 const videoPlayer = document.getElementById("videoPlayer");
 const videoList = document.getElementById("videoList");
 
-async function loadPlaylist() {
+async function loadPlaylist(pageToken = "") {
   try {
     if (!playlistId) {
       throw new Error("Playlist ID is missing in the URL parameters.");
     }
 
-    const url = `https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&playlistId=${playlistId}&key=${apiKey}&maxResults=20`;
+    const url = `https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&playlistId=${playlistId}&key=${apiKey}&maxResults=50${pageToken ? `&pageToken=${pageToken}` : ""}`;
     const response = await fetch(url);
 
     if (!response.ok) {
@@ -22,19 +22,27 @@ async function loadPlaylist() {
     const data = await response.json();
 
     if (!data.items || data.items.length === 0) {
-      videoList.innerHTML = "<p>No videos found in this playlist.</p>";
+      if (videoList.innerHTML.trim() === "") {
+        videoList.innerHTML = "<p>No videos found in this playlist.</p>";
+      }
       return;
     }
-
     displayVideos(data.items);
+
+    if (data.nextPageToken) {
+      await loadPlaylist(data.nextPageToken);
+    } else {
+      console.log(" All videos loaded!");
+    }
+
   } catch (error) {
     console.error("Error loading playlist:", error);
     videoList.innerHTML = `<p>Error loading playlist: ${error.message}</p>`;
   }
 }
 
+
 function displayVideos(videos) {
-  videoList.innerHTML = "";
 
   videos.forEach((video, index) => {
     const videoId = video.snippet.resourceId.videoId;
