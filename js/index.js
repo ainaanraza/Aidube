@@ -45,22 +45,40 @@ function renderLastPlayed() {
 
 function updateLectureHistory() {
   const historyDiv = document.getElementById("lectureHistory");
-  historyDiv.innerHTML = lectureHistory.length
-    ? lectureHistory.map((item, index) => `
-      <div>
-        <span>${item.title}</span>
-        <div>
-          <button onclick="redirectToPlaylistPage('${item.id}', '${item.title}')">View</button>
-          <button onclick="removeLectureHistory(${index})">Delete</button>
-          <button onclick="savePlaylist('${item.title}', '${item.id}')">Save</button>
-          </div>
+  const lectureHistory = JSON.parse(localStorage.getItem("lectureHistory")) || [];
+
+  if (!historyDiv) return;
+
+  if (lectureHistory.length === 0) {
+    historyDiv.innerHTML = "<p>No lecture history available.</p>";
+    return;
+  }
+
+  historyDiv.innerHTML = lectureHistory.map((item, index) => `
+    <div class="history-item">
+      <img src="${item.thumbnail || 'https://via.placeholder.com/120x70?text=No+Image'}" 
+           alt="${item.title}" 
+           class="history-thumb">
+      <div class="history-info">
+        <p class="history-title">${item.title}</p>
+        <div class="history-actions">
+          <button onclick="redirectToPlaylistPage('${item.id}', '${item.title}')">
+            <i class="fas fa-play"></i> View
+          </button>
+          <button onclick="removeLectureHistory(${index})">
+            <i class="fas fa-trash"></i> Delete
+          </button>
+          <button onclick="savePlaylist('${item.title}', '${item.id}')">
+            <i class="fas fa-bookmark"></i> Save
+          </button>
         </div>
-        <br>
       </div>
-    `).join("")
-    : "<p>No lecture history available.</p>";
+    </div>
+  `).join("");
+
   localStorage.setItem("lectureHistory", JSON.stringify(lectureHistory));
 }
+
 
 function updateSavedPlaylists() {
   const playlistsDiv = document.getElementById("savedPlaylists");
@@ -124,7 +142,7 @@ function renderPlaylists(playlists) {
         <div class="playlist-title">${playlistTitle}</div>
         <div class="playlist-channel">${channelTitle}</div>
         <div class="playlist-buttons">
-          <button onclick="redirectToPlaylistPage('${item.id.playlistId}', '${playlistTitle}')">
+          <button onclick="redirectToPlaylistPage('${item.id.playlistId}', '${playlistTitle}', '${thumbnail}')">
             <i class="fas fa-play"></i> View
           </button>
           <button onclick="savePlaylist('${playlistTitle}', '${item.id.playlistId}')">
@@ -145,29 +163,45 @@ function resumeLastPlayed() {
   }
 }
 
-function redirectToPlaylistPage(playlistId, title) {
-  saveToLectureHistory(title, playlistId);
+function redirectToPlaylistPage(playlistId, title, thumbnail) {
+  saveToLectureHistory(title, playlistId, thumbnail);
   window.location.href = `playlist.html?playlistId=${playlistId}`;
 }
 
-function saveToLectureHistory(title, id) {
-  if (!lectureHistory.some(item => item.id === id)) {
-    lectureHistory.push({ title, id });
-    updateLectureHistory();
+
+function saveToLectureHistory(title, id, thumbnailUrl = null) {
+  const history = JSON.parse(localStorage.getItem("lectureHistory")) || [];
+
+  const thumbnail = thumbnailUrl || `https://i.ytimg.com/vi/${id}/hqdefault.jpg`;
+
+  if (!history.some(item => item.id === id)) {
+    history.unshift({ title, id, thumbnail });
+    localStorage.setItem("lectureHistory", JSON.stringify(history));
   }
 }
+
+
+
 
 function savePlaylist(title, id) {
+  const savedPlaylists = JSON.parse(localStorage.getItem("savedPlaylists")) || [];
   if (!savedPlaylists.some(item => item.id === id)) {
     savedPlaylists.push({ title, id });
-    updateSavedPlaylists();
+    localStorage.setItem("savedPlaylists", JSON.stringify(savedPlaylists));
+    showNotification(`Playlist "${title}" saved successfully!`);
+  } else {
+    showNotification(`"${title}" is already in your saved playlists.`);
   }
 }
 
+
 function removeLectureHistory(index) {
+  const lectureHistory = JSON.parse(localStorage.getItem("lectureHistory")) || [];
   lectureHistory.splice(index, 1);
+  localStorage.setItem("lectureHistory", JSON.stringify(lectureHistory));
   updateLectureHistory();
 }
+
 
 function removeSavedPlaylist(index) {
   savedPlaylists.splice(index, 1);
@@ -175,9 +209,10 @@ function removeSavedPlaylist(index) {
 }
 
 function clearAllLectureHistory() {
-  lectureHistory.length = 0;
+  localStorage.removeItem("lectureHistory");
   updateLectureHistory();
 }
+
 
 function clearAllSavedPlaylists() {
   savedPlaylists.length = 0;
@@ -232,8 +267,56 @@ if (!activeQuery) {
   }
 }
 
+function showNotification(message, type = 'info') {
+    // Create notification element
+    const notification = document.createElement('div');
+    notification.className = `notification ${type}`;
+    notification.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        padding: 15px 20px;
+        background: ${type === 'success' ? '#d4edda' : type === 'error' ? '#f8d7da' : '#d1ecf1'};
+        color: ${type === 'success' ? '#155724' : type === 'error' ? '#721c24' : '#0c5460'};
+        border: 1px solid ${type === 'success' ? '#c3e6cb' : type === 'error' ? '#f5c6cb' : '#bee5eb'};
+        border-radius: 8px;
+        z-index: 10000;
+        animation: slideIn 0.3s ease;
+        max-width: 300px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    `;
+    
+    notification.innerHTML = `
+        <div style="display: flex; align-items: center; gap: 10px;">
+            <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-circle' : 'info-circle'}"></i>
+            <span>${message}</span>
+        </div>
+    `;
+    
+    document.body.appendChild(notification);
+    
+    // Auto remove after 3 seconds
+    setTimeout(() => {
+        notification.style.animation = 'slideOut 0.3s ease';
+        setTimeout(() => {
+            if (notification.parentNode) {
+                notification.parentNode.removeChild(notification);
+            }
+        }, 300);
+    }, 3000);
+}
 
-updateLectureHistory();
+
+if (document.getElementById("lectureHistory")) {
+  updateLectureHistory();
+}
 updateSavedPlaylists();
 renderLastPlayed();
 updateSavedRoadmaps();
+
+window.redirectToPlaylistPage = redirectToPlaylistPage;
+window.removeLectureHistory = removeLectureHistory;
+window.savePlaylist = savePlaylist;
+window.clearAllLectureHistory = clearAllLectureHistory;
+window.updateLectureHistory = updateLectureHistory;
+

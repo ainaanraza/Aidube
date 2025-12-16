@@ -23,15 +23,16 @@
   <div class="container">
     <div class="sidebar">
       <h3>User Profile</h3>
-      <div class="saved-item">
-        <p>Name: Ainaan Raza</p>
-      </div>
+      <div id="userInfo">Not logged in</div>
+      <br></br>
+
       
-      <h3>History</h3>
-      <div id="lectureHistory"></div>
-      <button class="clear-button" onclick="clearAllLectureHistory()">
-        <i class="fas fa-trash"></i> Clear All History
+      <!-- <h3>History</h3>
+      <button onclick="window.location.href='history.html'">
+        <i class="fas fa-clock"></i> View History
       </button>
+      <br></br> -->
+
       
       
       <h3>Saved Playlists</h3>
@@ -56,6 +57,9 @@
         <button onclick="redirectToRoadmap()">
           <i class="fas fa-map"></i> Roadmap
         </button>
+      <button onclick="window.location.href='history.html'">
+        <i class="fas fa-clock"></i> History
+      </button>
       </div>
       <div id="lastPlayedContainer"></div>
       <div class="playlists" id="playlistContainer"></div>
