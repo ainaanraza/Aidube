@@ -14,35 +14,27 @@
         <i class="fa-solid fa-chalkboard-user"></i>
         <span>Aidube</span>
       </div>
-      <button onclick="window.location.href='login.html'">
-        <i class="fas fa-sign-in-alt"></i> Login
-      </button>
+      <button id="loginBtn" onclick="window.location.href='login.html'">Login</button>
+      <button id="logoutBtn" style="display:none;" onclick="logoutUser()">Logout</button>
     </div>
   </header>
   
   <div class="container">
     <div class="sidebar">
-      <h3>User Profile</h3>
-      <div id="userInfo">Not logged in</div>
+      <div id="userInfo" style="margin-top:1rem;">
+        <p>Not logged in</p>
+      </div>
       <br></br>
-
-      
-      <!-- <h3>History</h3>
-      <button onclick="window.location.href='history.html'">
-        <i class="fas fa-clock"></i> View History
-      </button>
-      <br></br> -->
-
-      
-      
       <h3>Saved Playlists</h3>
       <div id="savedPlaylists"></div>
+      <br></br>
       <button class="clear-button" onclick="clearAllSavedPlaylists()">
         <i class="fas fa-trash"></i> Clear All Playlists
       </button>
       
       <h3>Saved Roadmaps</h3>
       <div class="saved-roadmaps" id="savedRoadmaps"></div>
+      <br></br>
       <button class="clear-button" onclick="clearAllRoadmaps()">
         <i class="fas fa-trash"></i> Clear All Roadmaps
       </button>
@@ -66,6 +58,6 @@
     </div>
   </div>
   
-  <script src="js/index.js"></script>
+  <script type="module" src="js/index.js"></script>
 </body>
 </html>

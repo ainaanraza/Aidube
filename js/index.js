@@ -1,3 +1,10 @@
+
+import { auth, db } from "./firebase.js";
+import { doc, setDoc, getDocs, collection, deleteDoc, query, orderBy, addDoc, onSnapshot } 
+  from "https://www.gstatic.com/firebasejs/12.5.0/firebase-firestore.js";
+import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-auth.js";
+
+
 const lectureHistory = JSON.parse(localStorage.getItem("lectureHistory")) || [];
 const savedPlaylists = JSON.parse(localStorage.getItem("savedPlaylists")) || [];
 const lastPlayedVideo = JSON.parse(localStorage.getItem("lastPlayedVideo"));
@@ -10,6 +17,35 @@ if (searchQuery) {
   fetchPlaylists(); // Automatically fetch playlists based on the query
 }
 
+function toggleSidebar() {
+  const sidebar = document.querySelector(".sidebar");
+  sidebar.classList.toggle("open");
+}
+
+async function loadPlaylistsFromCloud() {
+  const user = auth.currentUser;
+  if (!user) return null;
+  const q = query(collection(db, "users", user.uid, "playlists"), orderBy("savedAt", "desc"));
+  const snap = await getDocs(q);
+  return snap.docs.map(d => d.data());
+}
+
+async function clearAllSavedPlaylists() {
+    localStorage.removeItem("savedPlaylists");
+    updateSavedPlaylists();
+
+    const user = auth.currentUser;
+    if (user) {
+      const snap = await getDocs(collection(db, "users", user.uid, "playlists"));
+      for (const docSnap of snap.docs) {
+        await deleteDoc(docSnap.ref);
+      }
+  
+}
+}
+
+
+
 function redirectToRoadmap() {
   const query = document.getElementById("searchInput").value;
   if (query) {
@@ -21,13 +57,14 @@ function redirectToRoadmap() {
 
 function renderLastPlayed() {
   const container = document.getElementById("lastPlayedContainer");
+  if (!container) return; // Add this line to exit if container doesn't exist
 
   if (lastPlayedVideo) {
     const thumbnailUrl = `https://img.youtube.com/vi/${lastPlayedVideo.videoId}/hqdefault.jpg`;
     container.innerHTML = `
       <div class="last-played compact-last">
         <div class="last-thumb">
-          <img src="${thumbnailUrl}" alt="${lastPlayedVideo.title}">
+          <img src="${thumbnailUrl}" alt="${lastPlayedVideo.title}" onerror="this.src='https://via.placeholder.com/120x70?text=No+Thumbnail'">
         </div>
         <div class="last-info">
           <div class="last-title">${lastPlayedVideo.title}</div>
@@ -45,57 +82,64 @@ function renderLastPlayed() {
 
 function updateLectureHistory() {
   const historyDiv = document.getElementById("lectureHistory");
-  const lectureHistory = JSON.parse(localStorage.getItem("lectureHistory")) || [];
+  let lectureHistory = JSON.parse(localStorage.getItem("lectureHistory")) || [];
 
   if (!historyDiv) return;
+
+  // Filter out invalid playlist IDs
+  lectureHistory = lectureHistory.filter(item => isValidPlaylistId(item.id));
 
   if (lectureHistory.length === 0) {
     historyDiv.innerHTML = "<p>No lecture history available.</p>";
     return;
   }
 
-  historyDiv.innerHTML = lectureHistory.map((item, index) => `
+  historyDiv.innerHTML = lectureHistory.map((item, index) => {
+    const safeTitle = item.title.replace(/'/g, "\\'").replace(/"/g, '\\"');
+    return `
     <div class="history-item">
-      <img src="${item.thumbnail || 'https://via.placeholder.com/120x70?text=No+Image'}" 
+      <img src="${item.thumbnail}" 
            alt="${item.title}" 
-           class="history-thumb">
+           class="history-thumb"
+           onerror="this.src='https://via.placeholder.com/120x70?text=No+Image'">
       <div class="history-info">
         <p class="history-title">${item.title}</p>
         <div class="history-actions">
-          <button onclick="redirectToPlaylistPage('${item.id}', '${item.title}')">
+          <button onclick="redirectToPlaylistPage('${item.id}', '${safeTitle}')">
             <i class="fas fa-play"></i> View
           </button>
           <button onclick="removeLectureHistory(${index})">
             <i class="fas fa-trash"></i> Delete
           </button>
-          <button onclick="savePlaylist('${item.title}', '${item.id}')">
+          <button onclick="savePlaylist('${safeTitle}', '${item.id}')">
             <i class="fas fa-bookmark"></i> Save
           </button>
         </div>
       </div>
     </div>
-  `).join("");
+  `}).join("");
 
   localStorage.setItem("lectureHistory", JSON.stringify(lectureHistory));
 }
 
 
 function updateSavedPlaylists() {
-  const playlistsDiv = document.getElementById("savedPlaylists");
-  playlistsDiv.innerHTML = savedPlaylists.length
-    ? savedPlaylists.map((item, index) => `
+   const div = document.getElementById("savedPlaylists");
+  if (!div) return; 
+  const playlists = JSON.parse(localStorage.getItem("savedPlaylists")) || [];
+  div.innerHTML = playlists.length
+    ? playlists.map((p, i) => `
       <div>
-        <span>${item.title}</span>
+        <span>${p.title}</span>
         <div>
-          <button onclick="redirectToPlaylistPage('${item.id}', '${item.title}')">View</button>
-          <button onclick="removeSavedPlaylist(${index})">Delete</button>
+          <button onclick="redirectToPlaylistPage('${p.id}','${p.title}')">View</button>
+          <button onclick="removeSavedPlaylist(${i})">Delete</button>
         </div>
-        <br>
       </div>
     `).join("")
     : "<p>No saved playlists available.</p>";
-  localStorage.setItem("savedPlaylists", JSON.stringify(savedPlaylists));
 }
+
 
 function fetchPlaylists() {
   const searchQuery = document.getElementById("searchInput").value;
@@ -130,6 +174,12 @@ function renderPlaylists(playlists) {
   container.innerHTML = "";
 
   playlists.forEach(item => {
+    // Only process actual playlists, not videos
+    if (!item.id.playlistId || !isValidPlaylistId(item.id.playlistId)) {
+      return; // Skip this item
+    }
+
+    const playlistId = item.id.playlistId;
     const thumbnail = item.snippet.thumbnails.high?.url || item.snippet.thumbnails.default.url;
     const playlistTitle = item.snippet.title;
     const channelTitle = item.snippet.channelTitle;
@@ -142,10 +192,10 @@ function renderPlaylists(playlists) {
         <div class="playlist-title">${playlistTitle}</div>
         <div class="playlist-channel">${channelTitle}</div>
         <div class="playlist-buttons">
-          <button onclick="redirectToPlaylistPage('${item.id.playlistId}', '${playlistTitle}', '${thumbnail}')">
+          <button onclick="redirectToPlaylistPage('${playlistId}', '${playlistTitle}', '${thumbnail}')">
             <i class="fas fa-play"></i> View
           </button>
-          <button onclick="savePlaylist('${playlistTitle}', '${item.id.playlistId}')">
+          <button onclick="savePlaylist('${playlistTitle}', '${playlistId}')">
             <i class="fas fa-bookmark"></i> Save
           </button>
         </div>
@@ -169,44 +219,117 @@ function redirectToPlaylistPage(playlistId, title, thumbnail) {
 }
 
 
-function saveToLectureHistory(title, id, thumbnailUrl = null) {
-  const history = JSON.parse(localStorage.getItem("lectureHistory")) || [];
+function isValidPlaylistId(id) {
+  return id && id.length > 11 && (id.startsWith('PL') || id.startsWith('UU') || id.startsWith('FL'));
+}
 
+async function saveToLectureHistory(title, id, thumbnailUrl = null) {
+  // Validate playlist ID before saving
+  if (!isValidPlaylistId(id)) {
+    console.warn(`Invalid playlist ID "${id}" - not saving to history`);
+    return;
+  }
+
+  const history = JSON.parse(localStorage.getItem("lectureHistory")) || [];
   const thumbnail = thumbnailUrl || `https://i.ytimg.com/vi/${id}/hqdefault.jpg`;
 
-  if (!history.some(item => item.id === id)) {
-    history.unshift({ title, id, thumbnail });
+  // Avoid duplicates
+  const existing = history.find(h => h.id === id);
+  if (!existing) {
+    history.unshift({ title, id, thumbnail, playedAt: Date.now() });
     localStorage.setItem("lectureHistory", JSON.stringify(history));
+    updateLectureHistory(); 
+  }
+
+  const user = auth.currentUser;
+  if (user) {
+    await setDoc(doc(db, "users", user.uid, "history", id), {
+      title,
+      id,
+      thumbnail,
+      playedAt: Date.now()
+    }, { merge: true });
   }
 }
 
 
+async function savePlaylist(title, id) {
+  try {
+    // Decode any encoded characters in title
+    const decodedTitle = decodeURIComponent(title.replace(/&#(\d+);/g, (match, dec) => String.fromCharCode(dec)));
+    
+    const playlists = JSON.parse(localStorage.getItem("savedPlaylists")) || [];
+    
+    if (!playlists.some(p => p.id === id)) {
+      playlists.push({ title: decodedTitle, id, savedAt: Date.now() });
+      localStorage.setItem("savedPlaylists", JSON.stringify(playlists));
+      updateSavedPlaylists();
+      showNotification(`Playlist "${decodedTitle}" saved locally.`, "success");
+    } else {
+      showNotification(`"${decodedTitle}" is already saved.`, "info");
+    }
 
+    // Mirror to cloud
+    const user = auth.currentUser;
+    if (user) {
+      await setDoc(doc(db, "users", user.uid, "playlists", id), {
+        title: decodedTitle, 
+        id, 
+        savedAt: Date.now(),
+      }, { merge: true });
+    }
+  } catch (error) {
+    console.error("Error saving playlist:", error);
+    showNotification("Error saving playlist", "error");
+  }
+}
 
-function savePlaylist(title, id) {
+async function removeSavedPlaylist(index) {
   const savedPlaylists = JSON.parse(localStorage.getItem("savedPlaylists")) || [];
-  if (!savedPlaylists.some(item => item.id === id)) {
-    savedPlaylists.push({ title, id });
-    localStorage.setItem("savedPlaylists", JSON.stringify(savedPlaylists));
-    showNotification(`Playlist "${title}" saved successfully!`);
-  } else {
-    showNotification(`"${title}" is already in your saved playlists.`);
+  const removed = savedPlaylists[index]; // capture before removing
+
+  // remove locally
+  savedPlaylists.splice(index, 1);
+  localStorage.setItem("savedPlaylists", JSON.stringify(savedPlaylists));
+  updateSavedPlaylists();
+
+  // remove from Firestore
+  const user = auth.currentUser;
+  if (user && removed?.id) {
+    try {
+      await deleteDoc(doc(db, "users", user.uid, "playlists", removed.id));
+      console.log(` Playlist "${removed.title}" deleted from Firestore`);
+    } catch (e) {
+      console.error("Firestore delete failed:", e);
+    }
   }
 }
 
 
-function removeLectureHistory(index) {
-  const lectureHistory = JSON.parse(localStorage.getItem("lectureHistory")) || [];
-  lectureHistory.splice(index, 1);
-  localStorage.setItem("lectureHistory", JSON.stringify(lectureHistory));
-  updateLectureHistory();
-}
 
 
-function removeSavedPlaylist(index) {
-  savedPlaylists.splice(index, 1);
-  updateSavedPlaylists();
-}
+
+window.removeLectureHistory = async function(index) {
+    const lectureHistory = JSON.parse(localStorage.getItem("lectureHistory")) || [];
+    const removedItem = lectureHistory[index];
+    
+    // Remove from local storage
+    lectureHistory.splice(index, 1);
+    localStorage.setItem("lectureHistory", JSON.stringify(lectureHistory));
+    updateLectureHistory();
+
+    // Remove from Firestore to prevent real-time listener from re-adding it
+    const user = auth.currentUser;
+    if (user && removedItem?.id) {
+        try {
+            await deleteDoc(doc(db, "users", user.uid, "history", removedItem.id));
+            console.log(`Removed "${removedItem.title}" from Firestore history`);
+        } catch (error) {
+            console.error("Error removing from Firestore:", error);
+            showNotification("Error removing from cloud history", "error");
+        }
+    }
+};
 
 function clearAllLectureHistory() {
   localStorage.removeItem("lectureHistory");
@@ -214,58 +337,68 @@ function clearAllLectureHistory() {
 }
 
 
-function clearAllSavedPlaylists() {
-  savedPlaylists.length = 0;
-  updateSavedPlaylists();
-}
-
 function updateSavedRoadmaps() {
-  const savedRoadmaps = JSON.parse(localStorage.getItem("savedRoadmaps")) || [];
-  const roadmapsDiv = document.getElementById("savedRoadmaps");
-  roadmapsDiv.innerHTML = savedRoadmaps.length
-    ? savedRoadmaps.map((roadmap, index) => `
+  const roadmaps = JSON.parse(localStorage.getItem("savedRoadmaps")) || [];
+  const div = document.getElementById("savedRoadmaps");
+  div.innerHTML = roadmaps.length
+    ? roadmaps.map((r, i) => `
       <div>
-        <span>${roadmap.topic}</span>
+        <span>${r.topic}</span>
         <div>
-          <button onclick="viewSavedRoadmap('${roadmap.topic}')">View</button>
-          <button onclick="deleteSavedRoadmap(${index})">Delete</button>
+          <button onclick="viewSavedRoadmap('${r.topic}')">View</button>
+          <button onclick="deleteSavedRoadmap(${i})">Delete</button>
         </div>
-        <br>
       </div>
     `).join("")
     : "<p>No saved roadmaps available.</p>";
 }
 
-//  view a saved roadmap
 function viewSavedRoadmap(topic) {
   window.location.href = `roadmap.html?topic=${encodeURIComponent(topic)}`;
 }
 
-//   delete a saved roadmap
-function deleteSavedRoadmap(index) {
-  const savedRoadmaps = JSON.parse(localStorage.getItem("savedRoadmaps")) || [];
-  savedRoadmaps.splice(index, 1); // Remove the roadmap at the specified index
-  localStorage.setItem("savedRoadmaps", JSON.stringify(savedRoadmaps));
-  updateSavedRoadmaps(); // Refresh the displayed roadmaps
+async function deleteSavedRoadmap(index) {
+  const roadmaps = JSON.parse(localStorage.getItem("savedRoadmaps")) || [];
+  const removed = roadmaps.splice(index, 1)[0];
+  localStorage.setItem("savedRoadmaps", JSON.stringify(roadmaps));
+  updateSavedRoadmaps();
+
+  const user = auth.currentUser;
+  if (user && removed?.topic) {
+    const snap = await getDocs(collection(db, "users", user.uid, "roadmaps"));
+    snap.forEach(async docSnap => {
+      const data = docSnap.data();
+      if (data.topic === removed.topic) await deleteDoc(docSnap.ref);
+    });
+  }
 }
 
-//   clear all saved roadmaps
-function clearAllRoadmaps() {
-  localStorage.removeItem("savedRoadmaps"); // Remove all saved roadmaps
-  updateSavedRoadmaps(); // Refresh the displayed roadmaps
+
+async function clearAllRoadmaps() {
+  localStorage.removeItem("savedRoadmaps");
+  updateSavedRoadmaps();
+
+  const user = auth.currentUser;
+  if (user) {
+    const snap = await getDocs(collection(db, "users", user.uid, "roadmaps"));
+    snap.forEach(async d => await deleteDoc(d.ref));
+  }
 }
+
 
 const activeQuery = params.get("search");
 
 if (!activeQuery) {
   const savedResults = localStorage.getItem("lastSearchResults");
   const savedQuery = localStorage.getItem("lastSearchQuery");
+  const searchInput = document.getElementById("searchInput");
 
-  if (savedResults && savedQuery) {
-    document.getElementById("searchInput").value = savedQuery;
+  if (savedResults && savedQuery && searchInput) {
+    searchInput.value = savedQuery;
     renderPlaylists(JSON.parse(savedResults));
   }
 }
+
 
 function showNotification(message, type = 'info') {
     // Create notification element
@@ -314,9 +447,192 @@ updateSavedPlaylists();
 renderLastPlayed();
 updateSavedRoadmaps();
 
+onAuthStateChanged(auth, async (user) => {
+  if (!user) return;
+  try {
+    const cloud = await loadPlaylistsFromCloud();
+    if (cloud && cloud.length) {
+      // merge cloud into local and re-render sidebar
+      const local = JSON.parse(localStorage.getItem("savedPlaylists") || "[]");
+      const merged = [...cloud, ...local].reduce((acc, p) => {
+        if (!acc.some(x => x.id === p.id)) acc.push(p);
+        return acc;
+      }, []);
+      localStorage.setItem("savedPlaylists", JSON.stringify(merged));
+      updateSavedPlaylists();
+    }
+  } catch (e) {
+    console.warn("Load cloud playlists failed:", e);
+  }
+});
+
+onAuthStateChanged(auth, async (user) => {
+  if (!user) return;
+
+  // migrate playlists
+  try {
+    const localPlaylists = JSON.parse(localStorage.getItem("savedPlaylists") || "[]");
+    for (const p of localPlaylists) {
+      await setDoc(doc(db, "users", user.uid, "playlists", p.id), {
+        title: p.title, id: p.id, savedAt: Date.now()
+      }, { merge: true });
+    }
+  } catch (e) { console.warn("Playlist migration failed:", e); }
+
+  // migrate history
+  try {
+    const localHistory = JSON.parse(localStorage.getItem("lectureHistory") || "[]");
+    for (const h of localHistory) {
+      await setDoc(doc(db, "users", user.uid, "history", h.id), {
+        title: h.title, id: h.id, thumbnail: h.thumbnail || null, playedAt: Date.now()
+      }, { merge: true });
+    }
+  } catch (e) { console.warn("History migration failed:", e); }
+
+  // migrate roadmaps
+  try {
+    const localRoadmaps = JSON.parse(localStorage.getItem("savedRoadmaps") || "[]");
+const snap = await getDocs(collection(db, "users", user.uid, "roadmaps"));
+const existingTopics = snap.docs.map(d => d.data().topic);
+
+for (const r of localRoadmaps) {
+  if (!existingTopics.includes(r.topic)) {
+    await addDoc(collection(db, "users", user.uid, "roadmaps"), {
+      topic: r.topic, steps: r.steps, savedAt: Date.now()
+    });
+  }
+}
+  } catch (e) { console.warn("Roadmap migration failed:", e); }
+});
+
+onAuthStateChanged(auth, (user) => {
+  const userInfo = document.getElementById("userInfo");
+  const loginBtn = document.getElementById("loginBtn");
+  const logoutBtn = document.getElementById("logoutBtn");
+
+  if (user) {
+    if (userInfo)
+      userInfo.innerHTML = `
+        <img src="${user.photoURL}" style="width:50px;border-radius:50%">
+        <p>${user.displayName || "User"}</p>
+        <p style="font-size:0.9em;color:#555">${user.email}</p>
+      `;
+    if (loginBtn) loginBtn.style.display = "none";
+    if (logoutBtn) logoutBtn.style.display = "inline-block";
+
+    // 🔄 Start real-time Firestore syncing
+    watchUserRoadmaps()
+    watchUserHistory()
+
+  } else {
+    if (userInfo) userInfo.innerHTML = "<p>Not logged in</p>";
+    if (loginBtn) loginBtn.style.display = "inline-block";
+    if (logoutBtn) logoutBtn.style.display = "none";
+  }
+});
+
+onAuthStateChanged(auth, (user) => {
+  if (user) {
+    updateSavedPlaylists();
+    updateSavedRoadmaps();
+    updateLectureHistory();
+  }
+});
+
+
+
+function watchUserRoadmaps() {
+  const user = auth.currentUser;
+  if (!user) return;
+  const ref = collection(db, "users", user.uid, "roadmaps");
+  onSnapshot(ref, (snap) => {
+    const roadmaps = snap.docs.map(d => d.data());
+    localStorage.setItem("savedRoadmaps", JSON.stringify(roadmaps));
+    updateSavedRoadmaps();
+  });
+}
+
+function watchUserHistory() {
+    const user = auth.currentUser;
+    if (!user) return;
+    
+    const ref = collection(db, "users", user.uid, "history");
+    let isFirstSync = true;
+    
+    onSnapshot(ref, (snap) => {
+        const cloudHistory = snap.docs.map(d => ({
+            ...d.data(),
+            // Add document ID for consistency
+            _firestoreId: d.id
+        }));
+        
+        if (isFirstSync) {
+            // First sync: always use cloud data
+            console.log("🔄 Initial history sync from cloud");
+            localStorage.setItem("lectureHistory", JSON.stringify(cloudHistory));
+            updateLectureHistory();
+            isFirstSync = false;
+        } else {
+            // Subsequent updates: merge strategically
+            const localHistory = JSON.parse(localStorage.getItem("lectureHistory") || "[]");
+            
+            // Create a map of local items by ID for quick lookup
+            const localMap = new Map();
+            localHistory.forEach(item => localMap.set(item.id, item));
+            
+            // Merge: cloud items not in local should be added
+            let hasChanges = false;
+            const mergedHistory = [...localHistory];
+            
+            cloudHistory.forEach(cloudItem => {
+                if (!localMap.has(cloudItem.id)) {
+                    // New item from cloud, add it
+                    mergedHistory.unshift(cloudItem);
+                    hasChanges = true;
+                }
+            });
+            
+            if (hasChanges) {
+                console.log("🔄 Merging new items from cloud history");
+                localStorage.setItem("lectureHistory", JSON.stringify(mergedHistory));
+                updateLectureHistory();
+            }
+        }
+    });
+}
+function cleanupInvalidHistory() {
+  const lectureHistory = JSON.parse(localStorage.getItem("lectureHistory")) || [];
+  const validHistory = lectureHistory.filter(item => isValidPlaylistId(item.id));
+  
+  if (validHistory.length !== lectureHistory.length) {
+    console.log(`Cleaned up ${lectureHistory.length - validHistory.length} invalid history entries`);
+    localStorage.setItem("lectureHistory", JSON.stringify(validHistory));
+    updateLectureHistory();
+  }
+}
+
+// Call this once when the app loads
+cleanupInvalidHistory();
+export { updateLectureHistory, clearAllLectureHistory };
+
+
 window.redirectToPlaylistPage = redirectToPlaylistPage;
 window.removeLectureHistory = removeLectureHistory;
 window.savePlaylist = savePlaylist;
 window.clearAllLectureHistory = clearAllLectureHistory;
 window.updateLectureHistory = updateLectureHistory;
+window.fetchPlaylists = fetchPlaylists;
+window.redirectToRoadmap = redirectToRoadmap;
+window.clearAllSavedPlaylists = clearAllSavedPlaylists;
+window.toggleSidebar = toggleSidebar;
+window.updateLectureHistory = updateLectureHistory;
+window.viewSavedRoadmap = viewSavedRoadmap;
+window.deleteSavedRoadmap = deleteSavedRoadmap;
+window.clearAllRoadmaps = clearAllRoadmaps;
+window.removeSavedPlaylist = removeSavedPlaylist;
+window.updateSavedPlaylists = updateSavedPlaylists;
+
+
+
+
 

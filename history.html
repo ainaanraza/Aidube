@@ -47,17 +47,12 @@
 
   <main class="history-container">
     <div id="lectureHistory"></div>
-    <button class="clear-button" onclick="clearAllLectureHistory()">
+    <button class="clear-button" id="clearAllHistoryButton">
       <i class="fas fa-trash"></i> Clear All History
     </button>
   </main>
 
-  <script src="js/index.js"></script>
-  <script>
-    document.addEventListener("DOMContentLoaded", () => {
-    updateLectureHistory();
-  });
-  </script>
+  <script type="module" src="js/history.js"></script>
 
 </body>
 </html>

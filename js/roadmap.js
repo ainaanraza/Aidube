@@ -1,4 +1,7 @@
 import { GoogleGenerativeAI } from "https://cdn.jsdelivr.net/npm/@google/generative-ai/+esm";
+import { auth, db } from "./firebase.js";
+import { addDoc, collection, getDocs, deleteDoc } 
+  from "https://www.gstatic.com/firebasejs/12.5.0/firebase-firestore.js";
 
 const API_KEY = "AIzaSyBAymnNctjlkQG4HaYj4sAv3H0VE9g6hgA";
 
@@ -266,23 +269,44 @@ const model = genAI.getGenerativeModel({ model: preferredModel });
   }
 }
 
-// Save function (unchanged behavior)
-function saveRoadmap(topic, steps) {
-  const savedRoadmaps = JSON.parse(localStorage.getItem("savedRoadmaps") || "[]");
-  savedRoadmaps.push({ topic, steps });
+// Save function 
+async function saveRoadmap(topic, steps) {
+  let savedRoadmaps = JSON.parse(localStorage.getItem("savedRoadmaps") || "[]");
+
+  //  Check if topic already exists
+  const existingIndex = savedRoadmaps.findIndex(r => r.topic === topic);
+  if (existingIndex !== -1) {
+    savedRoadmaps[existingIndex] = { topic, steps }; // update
+  } else {
+    savedRoadmaps.push({ topic, steps }); // new
+  }
+
   localStorage.setItem("savedRoadmaps", JSON.stringify(savedRoadmaps));
+
+  //  Cloud save (avoid duplicates)
+  try {
+    const user = auth.currentUser;
+    if (user) {
+      const q = await getDocs(collection(db, "users", user.uid, "roadmaps"));
+      const duplicate = q.docs.find(doc => doc.data().topic === topic);
+      if (!duplicate) {
+        await addDoc(collection(db, "users", user.uid, "roadmaps"), {
+          topic, steps, savedAt: Date.now()
+        });
+      }
+    }
+  } catch (e) {
+    console.warn("Cloud save roadmap failed:", e);
+  }
 
   const notification = document.createElement("div");
   notification.className = "notification";
   notification.textContent = "Journey saved successfully!";
   document.body.appendChild(notification);
-
-  setTimeout(() => {
-    notification.style.opacity = "0";
-    notification.style.transform = "translateY(100px)";
-    setTimeout(() => notification.remove(), 300);
-  }, 3000);
+  setTimeout(() => notification.remove(), 3000);
 }
+
+
 
 function renderSavedRoadmap(topic, steps) {
   const roadmapContainer = document.getElementById("roadmapContent");

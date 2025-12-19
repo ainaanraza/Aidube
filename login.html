@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Login • Aidube</title>
+  <link rel="stylesheet" href="css/index.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
+</head>
+<body>
+  <div id="loginContainer" style="max-width:480px;margin:8rem auto;text-align:center;background:#fff;padding:2rem;border-radius:12px;border:1px solid #dbeafe;">
+    <h1 style="margin-bottom:1rem;">Sign in to Aidube</h1>
+    <p style="margin-bottom:1.25rem;color:#334155">Use your Google account (YouTube)</p>
+    <button id="loginBtn"><i class="fab fa-youtube"></i> Continue with Google</button>
+    <button id="logoutBtn" style="display:none;margin-left:8px;"><i class="fas fa-sign-out-alt"></i> Logout</button>
+  </div>
+
+  <script type="module">
+  import { auth, googleProvider } from "./js/firebase.js";
+  import { signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-auth.js";
+
+  window.addEventListener("DOMContentLoaded", () => {
+    const loginBtn = document.getElementById("loginBtn");
+    const logoutBtn = document.getElementById("logoutBtn");
+
+    loginBtn.onclick = async () => {
+      try {
+        console.log("Attempting sign-in...");
+        console.log("auth:", auth);
+        console.log("provider:", googleProvider);
+
+        const result = await signInWithPopup(auth, googleProvider);
+        console.log("Login success:", result);
+        localStorage.setItem("user", JSON.stringify(result.user));
+        window.location.href = "index.html";
+      } catch (e) {
+        console.error("🔥 Full error object:", e);
+        alert("Login failed: " + e.code + "\n" + e.message);
+      }
+    };
+
+    logoutBtn.onclick = async () => {
+      await signOut(auth);
+      localStorage.removeItem("user");
+      alert("Logged out");
+    };
+
+    onAuthStateChanged(auth, (user) => {
+      loginBtn.style.display = user ? "none" : "inline-block";
+      logoutBtn.style.display = user ? "inline-block" : "none";
+    });
+  });
+</script>
+
+</body>
+</html>
