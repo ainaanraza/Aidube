@@ -30,7 +30,6 @@
 
         const result = await signInWithPopup(auth, googleProvider);
         console.log("Login success:", result);
-        localStorage.setItem("user", JSON.stringify(result.user));
         window.location.href = "index.html";
       } catch (e) {
         console.error("🔥 Full error object:", e);
@@ -40,7 +39,6 @@
 
     logoutBtn.onclick = async () => {
       await signOut(auth);
-      localStorage.removeItem("user");
       alert("Logged out");
     };
 

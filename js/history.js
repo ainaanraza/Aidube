@@ -30,6 +30,27 @@ window.removeLectureHistory = async function(index) {
     }
 };
 
+// Clears all lecture history (localStorage and Firestore)
+window.clearAllLectureHistory = async function() {
+  // Remove from localStorage
+  localStorage.removeItem("lectureHistory");
+  updateLectureHistory();
+
+  // Also clear from Firestore (all 'history' docs)
+  const user = auth.currentUser;
+  if (user) {
+    try {
+      const snap = await getDocs(collection(db, "users", user.uid, "history"));
+      for (const docSnap of snap.docs) {
+        await deleteDoc(docSnap.ref);
+      }
+    } catch (err) {
+      console.error("Error clearing history in Firestore:", err);
+    }
+  }
+};
+
+
 window.redirectToPlaylistPage = function(playlistId, title, thumbnail) {
     saveToLectureHistory(title, playlistId, thumbnail);
     window.location.href = `playlist.html?playlistId=${playlistId}`;
@@ -65,16 +86,23 @@ window.savePlaylist = async function(title, id) {
 
 // Helper functions
 function saveToLectureHistory(title, id, thumbnailUrl = null) {
-    const history = JSON.parse(localStorage.getItem("lectureHistory")) || [];
-    const thumbnail = thumbnailUrl || 'https://via.placeholder.com/120x70?text=Playlist';
-    
-    const existing = history.find(h => h.id === id);
-    if (!existing) {
-        history.unshift({ title, id, thumbnail, playedAt: Date.now() });
-        localStorage.setItem("lectureHistory", JSON.stringify(history));
-        updateLectureHistory();
-    }
+  // Only save playlist-type IDs (not individual videos)
+  if (!id || id.length <= 11 || (!id.startsWith("PL") && !id.startsWith("UU") && !id.startsWith("FL"))) {
+    console.warn("Skipped saving non-playlist item to history:", id);
+    return;
+  }
+
+  const history = JSON.parse(localStorage.getItem("lectureHistory")) || [];
+  const thumbnail = thumbnailUrl || 'https://via.placeholder.com/120x70?text=Playlist';
+
+  const existing = history.find(h => h.id === id);
+  if (!existing) {
+    history.unshift({ title, id, thumbnail, playedAt: Date.now() });
+    localStorage.setItem("lectureHistory", JSON.stringify(history));
+    updateLectureHistory();
+  }
 }
+
 
 function updateLectureHistory() {
     const historyDiv = document.getElementById("lectureHistory");

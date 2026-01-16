@@ -1,8 +1,8 @@
 
 import { auth, db } from "./firebase.js";
-import { doc, setDoc, getDocs, collection, deleteDoc, query, orderBy, addDoc, onSnapshot } 
-  from "https://www.gstatic.com/firebasejs/12.5.0/firebase-firestore.js";
-import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-auth.js";
+import { doc, setDoc, getDoc, getDocs, collection, deleteDoc, query, orderBy, addDoc, onSnapshot }
+from "https://www.gstatic.com/firebasejs/12.5.0/firebase-firestore.js";
+import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-auth.js";
 
 
 const lectureHistory = JSON.parse(localStorage.getItem("lectureHistory")) || [];
@@ -158,8 +158,13 @@ function fetchPlaylists() {
       }
 
 
-      localStorage.setItem("lastSearchQuery", searchQuery);
-      localStorage.setItem("lastSearchResults", JSON.stringify(data.items));
+      const user = auth.currentUser;
+      if (user) {
+        setDoc(doc(db, "users", user.uid, "lastSearch", "latest"), {
+          query: searchQuery,
+          results: data.items
+        }).catch(error => console.error("Error saving last search to Firestore:", error));
+      }
 
       renderPlaylists(data.items);
     })
@@ -389,14 +394,29 @@ async function clearAllRoadmaps() {
 const activeQuery = params.get("search");
 
 if (!activeQuery) {
+  const searchInput = document.getElementById("searchInput");
+if (auth.currentUser && searchInput) {
+  // Load last search from Firestore
+  const docRef = doc(db, "users", auth.currentUser.uid, "lastSearch", "latest");
+  getDoc(docRef)
+    .then(docSnap => {
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        searchInput.value = data.query;
+        renderPlaylists(data.results);
+      }
+    })
+    .catch(error => console.error("Error fetching last search from Firestore:", error));
+} else if (searchInput) {
+  // Fallback to localStorage (if no logged-in user or if desired)
   const savedResults = localStorage.getItem("lastSearchResults");
   const savedQuery = localStorage.getItem("lastSearchQuery");
-  const searchInput = document.getElementById("searchInput");
-
-  if (savedResults && savedQuery && searchInput) {
+  if (savedResults && savedQuery) {
     searchInput.value = savedQuery;
     renderPlaylists(JSON.parse(savedResults));
   }
+}
+
 }
 
 
@@ -525,7 +545,7 @@ onAuthStateChanged(auth, (user) => {
     watchUserHistory()
 
   } else {
-    if (userInfo) userInfo.innerHTML = "<p>Not logged in</p>";
+    if (userInfo) userInfo.textContent = "Not logged in";
     if (loginBtn) loginBtn.style.display = "inline-block";
     if (logoutBtn) logoutBtn.style.display = "none";
   }
@@ -567,8 +587,6 @@ function watchUserHistory() {
         }));
         
         if (isFirstSync) {
-            // First sync: always use cloud data
-            console.log("🔄 Initial history sync from cloud");
             localStorage.setItem("lectureHistory", JSON.stringify(cloudHistory));
             updateLectureHistory();
             isFirstSync = false;
@@ -593,7 +611,6 @@ function watchUserHistory() {
             });
             
             if (hasChanges) {
-                console.log("🔄 Merging new items from cloud history");
                 localStorage.setItem("lectureHistory", JSON.stringify(mergedHistory));
                 updateLectureHistory();
             }
@@ -609,6 +626,13 @@ function cleanupInvalidHistory() {
     localStorage.setItem("lectureHistory", JSON.stringify(validHistory));
     updateLectureHistory();
   }
+}
+
+const logoutBtn = document.getElementById("logoutBtn");
+if (logoutBtn) {
+  logoutBtn.addEventListener("click", () => {
+    signOut(auth);  // Firebase auth sign-out
+  });
 }
 
 // Call this once when the app loads

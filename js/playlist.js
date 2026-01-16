@@ -11,8 +11,6 @@ const videoList = document.getElementById("videoList");
 
 // Function to validate playlist ID
 function isValidPlaylistId(id) {
-  // Playlist IDs typically start with 'PL' and are longer than 11 characters
-  // Video IDs are exactly 11 characters
   return id && id.length > 11 && (id.startsWith('PL') || id.startsWith('UU') || id.startsWith('FL'));
 }
 
@@ -49,13 +47,13 @@ async function loadPlaylist(pageToken = "") {
     if (data.nextPageToken) {
       await loadPlaylist(data.nextPageToken);
     }
-
   } catch (error) {
     console.error("Error loading playlist:", error);
     videoList.innerHTML = `
       <div class="error-message">
         <h3>Error loading playlist</h3>
-        <p>${error.message}</p>
+        setTimeout(() => window.location.href = "index.html", 5000);
+
         <p><a href="index.html">Return to Home</a></p>
       </div>
     `;
@@ -112,6 +110,8 @@ async function playVideo(videoId, videoTitle) {
   try {
     const user = auth.currentUser;
     if (user) {
+      // Skip saving individual videos to history
+    if (videoId.length > 11 && (videoId.startsWith("PL") || videoId.startsWith("UU") || videoId.startsWith("FL"))) {
       await setDoc(doc(db, "users", user.uid, "history", videoId), {
         title: videoTitle,
         id: videoId,
@@ -120,6 +120,8 @@ async function playVideo(videoId, videoTitle) {
         playlistId: playlistId
       }, { merge: true });
     }
+    }
+
   } catch (e) {
     console.warn("Cloud history write failed:", e);
   }
