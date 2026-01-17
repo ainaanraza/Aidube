@@ -6,33 +6,72 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
   <link rel="stylesheet" href="css/index.css">
+  <link rel="stylesheet" href="css/toast.css">
   <title>Aidube | Your Modern Classroom</title>
 </head>
 
 <body>
   <header>
     <div class="header-content">
-      <div class="logo-area" onclick="window.location.href='index.html'">
-        <i class="fa-solid fa-chalkboard-user"></i>
-        <span>Aidube</span>
+      <div class="left-section">
+        <div class="logo-area" onclick="window.location.href='index.html'">
+          <i class="fa-solid fa-chalkboard-user"></i>
+          <span>Aidube</span>
+        </div>
+        <button class="btn-ghost" onclick="window.location.href='about.html'">
+          <i class="fas fa-info-circle"></i> About
+        </button>
       </div>
       <div class="nav-actions">
-        <div id="userInfo" class="user-profile-header">
+        <div id="userInfo" class="user-profile-header" onclick="openProfileDrawer()">
           <div class="user-avatar"><i class="fas fa-user-circle"></i></div>
           <div class="user-details">
             <p>Guest Explorer</p>
-            <span>Welcome!</span>
+            <span>Sign in for full access</span>
           </div>
         </div>
-        <button id="loginBtn" class="btn-primary" onclick="window.location.href='login.html'">
-          <i class="fas fa-sign-in-alt"></i> Login
+
+
+      </div>
+    </div>
+  </header>
+
+  <!-- Mobile Profile Drawer -->
+  <div id="drawerOverlay" class="drawer-overlay" onclick="closeProfileDrawer()"></div>
+  <div id="profileDrawer" class="profile-drawer">
+    <div class="drawer-header">
+      <button class="btn-ghost drawer-close-btn" onclick="closeProfileDrawer()">
+        <i class="fas fa-times"></i>
+      </button>
+      <div id="drawerUserInfo" class="drawer-user-info">
+        <!-- Injected via JS -->
+      </div>
+    </div>
+
+    <div class="drawer-content">
+      <div class="drawer-section">
+        <h3><i class="fas fa-list-ul"></i> Saved Playlists</h3>
+        <div id="drawerSavedPlaylists" class="saved-list"></div>
+        <button class="clear-button btn-ghost" onclick="clearAllSavedPlaylists()">
+          <i class="fas fa-trash-alt"></i> Clear All
         </button>
-        <button id="logoutBtn" class="btn-secondary" style="display:none;">
+      </div>
+
+      <div class="drawer-section">
+        <h3><i class="fas fa-map-marked-alt"></i> Saved Roadmaps</h3>
+        <div id="drawerSavedRoadmaps" class="saved-list"></div>
+        <button class="clear-button btn-ghost" onclick="clearAllRoadmaps()">
+          <i class="fas fa-trash-alt"></i> Clear All
+        </button>
+      </div>
+
+      <div class="drawer-footer">
+        <button id="drawerLogoutBtn" class="btn-secondary" style="width: 100%; justify-content: center;">
           <i class="fas fa-sign-out-alt"></i> Logout
         </button>
       </div>
     </div>
-  </header>
+  </div>
 
   <div class="container">
     <aside class="sidebar">

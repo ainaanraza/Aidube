@@ -63,3 +63,40 @@ export async function retryOperation(operation, maxRetries = 3, delay = 2000, on
         }
     }
 }
+
+export function showNotification(message, type = 'info') {
+    // Remove existing notifications to prevent stacking too many
+    const existingNotifications = document.querySelectorAll('.notification');
+    existingNotifications.forEach(n => n.remove());
+
+    const notification = document.createElement('div');
+    notification.className = `notification ${type}`;
+
+    // Icon selection
+    let iconClass = 'info-circle';
+    if (type === 'success') iconClass = 'check-circle';
+    if (type === 'error') iconClass = 'exclamation-circle';
+    if (type === 'warning') iconClass = 'exclamation-triangle';
+
+    notification.innerHTML = `
+        <i class="fas fa-${iconClass}"></i>
+        <span>${message}</span>
+    `;
+
+    document.body.appendChild(notification);
+
+    // Trigger animation
+    requestAnimationFrame(() => {
+        notification.classList.add('active');
+    });
+
+    // Auto remove
+    setTimeout(() => {
+        notification.classList.remove('active');
+        setTimeout(() => {
+            if (notification.parentNode) {
+                notification.parentNode.removeChild(notification);
+            }
+        }, 300); // Wait for transition
+    }, 3000);
+}

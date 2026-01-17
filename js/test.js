@@ -1,10 +1,16 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
-import { getGeminiApiKey, rotateGeminiKey, retryOperation } from "./utils.js";
+import { auth } from "./firebase.js";
+import { getGeminiApiKey, rotateGeminiKey, retryOperation, showNotification } from "./utils.js";
 
 const urlParams = new URLSearchParams(window.location.search);
 const videoId = urlParams.get('videoId');
 
 async function generateTest() {
+  const user = auth.currentUser;
+  if (!user) {
+    showNotification("You must be logged in to generate a test.", "warning");
+    return;
+  }
 
   const testContent = document.getElementById('testContent');
 
@@ -122,7 +128,7 @@ function submitTest() {
     }
   });
 
-  alert(`You scored ${score} out of ${correctAnswers.length} !`);
+  showNotification(`You scored ${score} out of ${correctAnswers.length} !`, "success");
 }
 
 window.generateTest = generateTest;

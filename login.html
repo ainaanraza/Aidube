@@ -7,6 +7,7 @@
   <title>Login • Aidube</title>
   <link rel="stylesheet" href="css/login.css" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
+  <link rel="stylesheet" href="css/toast.css">
 </head>
 
 <body>
@@ -110,6 +111,7 @@
     };
 
     import { auth, googleProvider, signInWithPopup, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, updateProfile } from "./js/firebase.js";
+    import { showNotification } from "./js/utils.js";
 
     // Login script loaded
 
@@ -170,7 +172,7 @@
           window.location.href = "index.html";
         } catch (error) {
           // Google Login Error
-          alert("Google Login Failed: " + error.message);
+          showNotification("Google Login Failed: " + error.message, "error");
         }
       };
 
@@ -250,7 +252,7 @@
 
     } catch (err) {
       // Critical error in login script
-      alert("Something went wrong initializing the login page. Check console for details.");
+      showNotification("Something went wrong initializing the login page. Check console for details.", "error");
     }
   </script>
 </body>

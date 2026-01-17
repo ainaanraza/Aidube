@@ -1,6 +1,6 @@
 import { auth, db } from "./firebase.js";
 import { setDoc, doc, getDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-firestore.js";
-import { getYouTubeApiKey, rotateYouTubeKey, isValidPlaylistId, retryOperation, getGeminiApiKey, rotateGeminiKey } from "./utils.js";
+import { getYouTubeApiKey, rotateYouTubeKey, isValidPlaylistId, retryOperation, getGeminiApiKey, rotateGeminiKey, showNotification } from "./utils.js";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
 
@@ -427,6 +427,12 @@ function createStyledPdf(title, text, shortName = 'notes') {
 }
 
 async function handleGenerateDocument(type, btnElement) {
+  const user = auth.currentUser;
+  if (!user) {
+    showNotification(`You must be logged in to generate ${type === 'notes' ? 'detailed notes' : 'a summary'}.`, "warning");
+    return;
+  }
+
   if (btnElement) {
     btnElement.disabled = true;
     btnElement.dataset.originalText = btnElement.innerHTML;
@@ -467,7 +473,7 @@ async function handleGenerateDocument(type, btnElement) {
     if (type === 'notes') {
       prompt = `You are an expert academic tutor. ${baseInstruction}
           
-          Create comprehensive, detailed study notes including:
+          Create comprehensive, detailed study notes IN ENGLISH including:
           1.  **Executive Summary**
           2.  **Key Concepts**
           3.  **Core Definitions**
@@ -475,6 +481,7 @@ async function handleGenerateDocument(type, btnElement) {
           5.  **Practice Questions**
           
           Please use Markdown formatting for headings (e.g. # Topic, ## Subtopic) and bold text (e.g. **important**).
+          ENSURE ALL CONTENT IS GENERATED IN ENGLISH, even if the source text is in another language.
           
           ${sourceContext}:
           ${transcript}`;
@@ -482,13 +489,14 @@ async function handleGenerateDocument(type, btnElement) {
     } else if (type === 'summary') {
       prompt = `You are an expert summarizer. ${baseInstruction}
           
-          Create a detailed, comprehensive summary including:
+          Create a detailed, comprehensive summary IN ENGLISH including:
           1.  **Main Argument**
           2.  **Key Insights**
           3.  **Detailed Breakdown**
           4.  **Conclusion**
           
           Please use Markdown formatting for headings (e.g. # Topic, ## Subtopic) and bold text (e.g. **important**).
+          ENSURE ALL CONTENT IS GENERATED IN ENGLISH, even if the source text is in another language.
           
           ${sourceContext}:
           ${transcript}`;
@@ -503,7 +511,7 @@ async function handleGenerateDocument(type, btnElement) {
     // Create PDF
     createStyledPdf(`${title}`, result, `${type}_${videoId}`);
   } catch (e) {
-    alert('Document generation failed: ' + (e.message || e));
+    showNotification('Document generation failed: ' + (e.message || e), "error");
   } finally {
     if (btnElement) {
       btnElement.disabled = false;
@@ -523,13 +531,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
   if (btnTest) {
     btnTest.addEventListener('click', async () => {
+      const user = auth.currentUser;
+      if (!user) {
+        showNotification("You must be logged in to take a test.", "warning");
+        return;
+      }
       try {
         const iframe = videoPlayer.querySelector('iframe');
-        if (!iframe) return alert('No video loaded');
+        if (!iframe) return showNotification('No video loaded', "error");
         const src = iframe.src || '';
         const match = src.match(/embed\/([a-zA-Z0-9_-]{11,})/);
         const videoId = match ? match[1] : null;
-        if (!videoId) return alert('Could not determine video id');
+        if (!videoId) return showNotification('Could not determine video id', "error");
 
         // Try to fetch transcript and store in sessionStorage for new page
         const transcript = await fetchTranscript(videoId) || `No transcript available for https://www.youtube.com/watch?v=${videoId}`;
@@ -539,7 +552,7 @@ document.addEventListener('DOMContentLoaded', () => {
         window.location.href = `test.html?videoId=${encodeURIComponent(videoId)}`;
       } catch (e) {
         // Test generation error
-        alert('Could not start test generation: ' + e.message);
+        showNotification('Could not start test generation: ' + e.message, "error");
       }
     });
   }
@@ -609,7 +622,7 @@ function injectSaveButton() {
 
 async function savePlaylistToDashboard(btnElement) {
   if (!playlistId || !isValidPlaylistId(playlistId)) {
-    alert("Invalid playlist ID");
+    showNotification("Invalid playlist ID", "error");
     return;
   }
 
@@ -644,29 +657,15 @@ async function savePlaylistToDashboard(btnElement) {
     // The existing code has a style for .error-message but maybe not a generic notification.
     // I'll create a simple one or reuse if I see one reference. 
     // I saw showNotification in index.js but not exported. I'll make a local one.
-    showLocalNotification(`Playlist "${title}" saved!`);
+    showNotification(`Playlist "${title}" saved!`, "success");
 
   } catch (error) {
     // Error saving playlist
-    alert("Failed to save playlist. See console.");
+    showNotification("Failed to save playlist. See console.", "error");
   }
 }
 
-function showLocalNotification(msg) {
-  const div = document.createElement("div");
-  div.style.position = "fixed";
-  div.style.bottom = "20px";
-  div.style.right = "20px";
-  div.style.background = "#10b981";
-  div.style.color = "white";
-  div.style.padding = "10px 20px";
-  div.style.borderRadius = "8px";
-  div.style.boxShadow = "0 2px 10px rgba(0,0,0,0.1)";
-  div.style.zIndex = "9999";
-  div.innerHTML = `<i class="fas fa-check-circle"></i> ${msg}`;
-  document.body.appendChild(div);
-  setTimeout(() => div.remove(), 3000);
-}
+
 
 // Call fetch details on load
 fetchPlaylistDetails();

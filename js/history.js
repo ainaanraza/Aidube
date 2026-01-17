@@ -7,6 +7,7 @@ import {
     getDocs,
     query
 } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-firestore.js";
+import { showNotification } from "./utils.js";
 
 window.removeLectureHistory = async function (index) {
     const lectureHistory = JSON.parse(localStorage.getItem("lectureHistory")) || [];
@@ -148,42 +149,7 @@ function updateLectureHistory() {
     }).join("");
 }
 
-function showNotification(message, type = 'info') {
-    const notification = document.createElement('div');
-    notification.className = `notification ${type}`;
-    notification.style.cssText = `
-        position: fixed;
-        top: 20px;
-        right: 20px;
-        padding: 15px 20px;
-        background: ${type === 'success' ? '#d4edda' : type === 'error' ? '#f8d7da' : '#d1ecf1'};
-        color: ${type === 'success' ? '#155724' : type === 'error' ? '#721c24' : '#0c5460'};
-        border: 1px solid ${type === 'success' ? '#c3e6cb' : type === 'error' ? '#f5c6cb' : '#bee5eb'};
-        border-radius: 8px;
-        z-index: 10000;
-        animation: slideIn 0.3s ease;
-        max-width: 300px;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-    `;
 
-    notification.innerHTML = `
-        <div style="display: flex; align-items: center; gap: 10px;">
-            <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-circle' : 'info-circle'}"></i>
-            <span>${message}</span>
-        </div>
-    `;
-
-    document.body.appendChild(notification);
-
-    setTimeout(() => {
-        notification.style.animation = 'slideOut 0.3s ease';
-        setTimeout(() => {
-            if (notification.parentNode) {
-                notification.parentNode.removeChild(notification);
-            }
-        }, 300);
-    }, 3000);
-}
 
 // Initialize when DOM is loaded
 document.addEventListener("DOMContentLoaded", () => {

@@ -2,7 +2,7 @@ import { auth, db } from "./firebase.js";
 import { doc, setDoc, getDoc, getDocs, collection, deleteDoc, query, orderBy, addDoc, onSnapshot }
   from "https://www.gstatic.com/firebasejs/12.5.0/firebase-firestore.js";
 import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-auth.js";
-import { getYouTubeApiKey, rotateYouTubeKey, isValidPlaylistId, retryOperation } from "./utils.js";
+import { getYouTubeApiKey, rotateYouTubeKey, isValidPlaylistId, retryOperation, showNotification } from "./utils.js";
 
 const lectureHistory = JSON.parse(localStorage.getItem("lectureHistory")) || [];
 const savedPlaylists = JSON.parse(localStorage.getItem("savedPlaylists")) || [];
@@ -19,6 +19,18 @@ if (searchQuery) {
 function toggleSidebar() {
   const sidebar = document.querySelector(".sidebar");
   sidebar.classList.toggle("open");
+}
+
+function openProfileDrawer() {
+  document.getElementById("profileDrawer")?.classList.add("open");
+  document.getElementById("drawerOverlay")?.classList.add("open");
+  document.body.style.overflow = "hidden";
+}
+
+function closeProfileDrawer() {
+  document.getElementById("profileDrawer")?.classList.remove("open");
+  document.getElementById("drawerOverlay")?.classList.remove("open");
+  document.body.style.overflow = "";
 }
 
 async function loadPlaylistsFromCloud() {
@@ -47,11 +59,18 @@ async function clearAllSavedPlaylists() {
 }
 
 function redirectToRoadmap() {
+  const user = auth.currentUser;
+  if (!user) {
+    showNotification("You must be logged in to create a roadmap.", "warning");
+    return;
+  }
+
+
   const query = document.getElementById("searchInput").value;
   if (query) {
     window.location.href = `roadmap.html?topic=${encodeURIComponent(query)}`;
   } else {
-    alert("Please enter a topic to generate a roadmap.");
+    showNotification("Please enter a topic to generate a roadmap.", "warning");
   }
 }
 
@@ -125,10 +144,23 @@ function updateLectureHistory() {
 
 
 function updateSavedPlaylists() {
-  const div = document.getElementById("savedPlaylists");
-  if (!div) return;
   const playlists = JSON.parse(localStorage.getItem("savedPlaylists")) || [];
-  div.innerHTML = playlists.length
+
+  // Update Sidebar
+  const div = document.getElementById("savedPlaylists");
+  if (div) {
+    div.innerHTML = renderPlaylistItems(playlists);
+  }
+
+  // Update Drawer
+  const drawerDiv = document.getElementById("drawerSavedPlaylists");
+  if (drawerDiv) {
+    drawerDiv.innerHTML = renderPlaylistItems(playlists);
+  }
+}
+
+function renderPlaylistItems(playlists) {
+  return playlists.length
     ? playlists.map((p, i) => `
       <div class="saved-item">
         <div class="saved-item-title">${p.title}</div>
@@ -359,9 +391,22 @@ function clearAllLectureHistory() {
 
 function updateSavedRoadmaps() {
   const roadmaps = JSON.parse(localStorage.getItem("savedRoadmaps")) || [];
+
+  // Update Sidebar
   const div = document.getElementById("savedRoadmaps");
-  if (!div) return;
-  div.innerHTML = roadmaps.length
+  if (div) {
+    div.innerHTML = renderRoadmapItems(roadmaps);
+  }
+
+  // Update Drawer
+  const drawerDiv = document.getElementById("drawerSavedRoadmaps");
+  if (drawerDiv) {
+    drawerDiv.innerHTML = renderRoadmapItems(roadmaps);
+  }
+}
+
+function renderRoadmapItems(roadmaps) {
+  return roadmaps.length
     ? roadmaps.map((r, i) => `
       <div class="saved-item">
         <div class="saved-item-title">${r.topic}</div>
@@ -448,44 +493,7 @@ if (!activeQuery) {
 }
 
 
-function showNotification(message, type = 'info') {
-  // Create notification element
-  const notification = document.createElement('div');
-  notification.className = `notification ${type}`;
-  notification.style.cssText = `
-        position: fixed;
-        top: 20px;
-        right: 20px;
-        padding: 15px 20px;
-        background: ${type === 'success' ? '#d4edda' : type === 'error' ? '#f8d7da' : '#d1ecf1'};
-        color: ${type === 'success' ? '#155724' : type === 'error' ? '#721c24' : '#0c5460'};
-        border: 1px solid ${type === 'success' ? '#c3e6cb' : type === 'error' ? '#f5c6cb' : '#bee5eb'};
-        border-radius: 8px;
-        z-index: 10000;
-        animation: slideIn 0.3s ease;
-        max-width: 300px;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-    `;
 
-  notification.innerHTML = `
-        <div style="display: flex; align-items: center; gap: 10px;">
-            <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-circle' : 'info-circle'}"></i>
-            <span>${message}</span>
-        </div>
-    `;
-
-  document.body.appendChild(notification);
-
-  // Auto remove after 3 seconds
-  setTimeout(() => {
-    notification.style.animation = 'slideOut 0.3s ease';
-    setTimeout(() => {
-      if (notification.parentNode) {
-        notification.parentNode.removeChild(notification);
-      }
-    }, 300);
-  }, 3000);
-}
 
 
 if (document.getElementById("lectureHistory")) {
@@ -555,8 +563,8 @@ onAuthStateChanged(auth, async (user) => {
 
 onAuthStateChanged(auth, (user) => {
   const userInfo = document.getElementById("userInfo");
-  const loginBtn = document.getElementById("loginBtn");
-  const logoutBtn = document.getElementById("logoutBtn");
+
+
 
   if (user) {
     user.reload().then(() => {
@@ -571,10 +579,25 @@ onAuthStateChanged(auth, (user) => {
           </div>
         `;
       }
+
+      // Update Drawer User Info
+      const drawerUserInfo = document.getElementById("drawerUserInfo");
+      if (drawerUserInfo) {
+        drawerUserInfo.innerHTML = `
+           <div class="user-avatar">
+             <img src="${user.photoURL || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(user.displayName || 'User') + '&background=random'}" style="width:100%; height:100%; border-radius:50%">
+           </div>
+           <h3>${user.displayName || "Learner"}</h3>
+           <p>${user.email}</p>
+         `;
+        const dLogout = document.getElementById("drawerLogoutBtn");
+        if (dLogout) dLogout.style.display = "flex";
+      }
+
     });
 
-    if (loginBtn) loginBtn.style.display = "none";
-    if (logoutBtn) logoutBtn.style.display = "inline-flex";
+
+
 
     watchUserRoadmaps()
     watchUserHistory()
@@ -589,8 +612,22 @@ onAuthStateChanged(auth, (user) => {
         </div>
       `;
     }
-    if (loginBtn) loginBtn.style.display = "inline-flex";
-    if (logoutBtn) logoutBtn.style.display = "none";
+
+    // Update Drawer User Info (Guest)
+    const drawerUserInfo = document.getElementById("drawerUserInfo");
+    if (drawerUserInfo) {
+      drawerUserInfo.innerHTML = `
+        <div class="user-avatar" style="background: var(--text-muted);"><i class="fas fa-user-circle"></i></div>
+        <h3>Guest Explorer</h3>
+        <p>Sign in to save your progress</p>
+        <button class="btn-primary" onclick="window.location.href='login.html'" style="margin-top:0.5rem;">Sign In</button>
+      `;
+      const dLogout = document.getElementById("drawerLogoutBtn");
+      if (dLogout) dLogout.style.display = "none";
+    }
+
+
+
   }
 });
 
@@ -677,11 +714,17 @@ function cleanupInvalidHistory() {
   }
 }
 
-const logoutBtn = document.getElementById("logoutBtn");
-if (logoutBtn) {
-  logoutBtn.addEventListener("click", () => {
-    signOut(auth);  // Firebase auth sign-out
-  });
+
+const drawerLogoutBtn = document.getElementById("drawerLogoutBtn");
+
+function handleLogout() {
+  signOut(auth);
+  closeProfileDrawer();
+}
+
+
+if (drawerLogoutBtn) {
+  drawerLogoutBtn.addEventListener("click", handleLogout);
 }
 
 // Call this once when the app loads
@@ -705,6 +748,8 @@ window.clearAllRoadmaps = clearAllRoadmaps;
 window.removeSavedPlaylist = removeSavedPlaylist;
 window.updateSavedPlaylists = updateSavedPlaylists;
 window.resumeLastPlayed = resumeLastPlayed;
+window.closeProfileDrawer = closeProfileDrawer;
+window.openProfileDrawer = openProfileDrawer;
 window.removeSavedPlaylist = removeSavedPlaylist;
 window.updateSavedPlaylists = updateSavedPlaylists;
 window.resumeLastPlayed = resumeLastPlayed;

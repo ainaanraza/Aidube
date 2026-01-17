@@ -2,6 +2,7 @@ import { GoogleGenerativeAI } from "https://cdn.jsdelivr.net/npm/@google/generat
 import { auth, db } from "./firebase.js";
 import { addDoc, collection, getDocs, deleteDoc }
   from "https://www.gstatic.com/firebasejs/12.5.0/firebase-firestore.js";
+import { showNotification } from "./utils.js";
 
 const API_KEY = "AIzaSyAcaoCV_IhsD61HrYWewecC0Mpeys0LrbE";//skillsboost3
 
@@ -61,8 +62,13 @@ document.addEventListener("DOMContentLoaded", () => {
   const generateBtn = $("#generateBtn");
   if (generateBtn) {
     generateBtn.addEventListener("click", async () => {
+      const user = auth.currentUser;
+      if (!user) {
+        showNotification("You must be logged in to generate a roadmap.", "warning");
+        return;
+      }
       if (!topic) {
-        alert("Please provide a topic in the URL (?topic=YourTopic)");
+        showNotification("Please provide a topic in the URL (?topic=YourTopic)", "error");
         return;
       }
       await generateRoadmap(topic);
@@ -300,51 +306,10 @@ async function saveRoadmap(topic, steps) {
     // Cloud save roadmap failed
   }
 
-  const notification = document.createElement("div");
-  notification.className = "notification";
-  notification.textContent = showNotification("Journey saved successfully!");
-  document.body.appendChild(notification);
-  setTimeout(() => notification.remove(), 3000);
+  showNotification("Journey saved successfully!", "success");
 }
 
-function showNotification(message, type = 'info') {
-  // Create notification element
-  const notification = document.createElement('div');
-  notification.className = `notification ${type}`;
-  notification.style.cssText = `
-        position: fixed;
-        top: 20px;
-        right: 20px;
-        padding: 15px 20px;
-        background: ${type === 'success' ? '#d4edda' : type === 'error' ? '#f8d7da' : '#d1ecf1'};
-        color: ${type === 'success' ? '#155724' : type === 'error' ? '#721c24' : '#0c5460'};
-        border: 1px solid ${type === 'success' ? '#c3e6cb' : type === 'error' ? '#f5c6cb' : '#bee5eb'};
-        border-radius: 8px;
-        z-index: 10000;
-        animation: slideIn 0.3s ease;
-        max-width: 300px;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-    `;
 
-  notification.innerHTML = `
-        <div style="display: flex; align-items: center; gap: 10px;">
-            <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-circle' : 'info-circle'}"></i>
-            <span>${message}</span>
-        </div>
-    `;
-
-  document.body.appendChild(notification);
-
-  // Auto remove after 3 seconds
-  setTimeout(() => {
-    notification.style.animation = 'slideOut 0.3s ease';
-    setTimeout(() => {
-      if (notification.parentNode) {
-        notification.parentNode.removeChild(notification);
-      }
-    }, 300);
-  }, 3000);
-}
 
 function renderSavedRoadmap(topic, steps) {
   const roadmapContainer = document.getElementById("roadmapContent");
