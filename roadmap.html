@@ -1,55 +1,79 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Learning Journey</title>
+  <title>Aidube | Learning Journey</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
   <link href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css" rel="stylesheet">
   <link rel="stylesheet" href="css/roadmap.css">
-  <!-- removed embedded styles - moved into css/roadmap.css -->
 </head>
+
 <body>
-  <h1 class="roadmap-title">Your Learning Journey: <span id="topicTitle"></span></h1>
-  
-  <div class="roadmap-container">
-    <!-- === FILTER SECTION START === -->
-    <div class="filter-card compact">
-      <h3 class="filter-title">Customize</h3>
-
-      <div class="filter-row">
-        <div class="filter-group">
-          <label for="levelSelect">Level</label>
-          <select id="levelSelect">
-            <option value="beginner">Beginner</option>
-            <option value="intermediate">Intermediate</option>
-            <option value="advanced">Advanced</option>
-          </select>
-        </div>
-
-        <div class="filter-group">
-          <label for="knowledgeSelect">Knowledge</label>
-          <select id="knowledgeSelect">
-            <option value="new">New</option>
-            <option value="previous">Known</option>
-          </select>
-        </div>
-      </div>
-
-      <div id="topicsContainer">
-        <label><strong>Known topics</strong></label>
-        <div id="dynamicTopics" class="topics-grid"></div>
-      </div>
-
-      <button id="generateBtn" class="generate-btn">Generate</button>
+  <header>
+    <div class="header-content">
+      <h1><i class="fas fa-map-signs"></i> Journey Planner</h1>
+      <a href="index.html" class="back-button">
+        <i class="fas fa-arrow-left"></i>
+        <span>Dashboard</span>
+      </a>
     </div>
-    <!-- === FILTER SECTION END === -->
+  </header>
 
-    <div id="roadmapContent">
-      <!-- unified content area (mobile UI removed) -->
-      <div class="loading">Create your personalized learning path</div>
+  <div class="container">
+    <div class="roadmap-header">
+      <h2 id="topicTitle">Custom Roadmap</h2>
+      <p>Personalize your learning path with AI-driven milestones</p>
+    </div>
+
+    <div class="roadmap-container">
+      <div class="filter-card animate__animated animate__fadeIn">
+        <div class="filter-row"
+          style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.5rem; margin-bottom: 2rem;">
+          <div class="filter-group">
+            <label style="display: block; font-weight: 700; margin-bottom: 0.5rem;">Target Level</label>
+            <select id="levelSelect"
+              style="width: 100%; padding: 0.75rem; border-radius: 12px; border: 1px solid var(--border); background: white; font-family: inherit;">
+              <option value="beginner">Beginner</option>
+              <option value="intermediate" selected>Intermediate</option>
+              <option value="advanced">Advanced</option>
+            </select>
+          </div>
+
+          <div class="filter-group">
+            <label style="display: block; font-weight: 700; margin-bottom: 0.5rem;">Current Knowledge</label>
+            <select id="knowledgeSelect"
+              style="width: 100%; padding: 0.75rem; border-radius: 12px; border: 1px solid var(--border); background: white; font-family: inherit;">
+              <option value="new">Starting Fresh</option>
+              <option value="previous">Some Experience</option>
+            </select>
+          </div>
+        </div>
+
+        <div id="topicsContainer" style="margin-bottom: 2rem; display: none;">
+          <label style="display: block; font-weight: 700; margin-bottom: 1rem;">Select areas you already know:</label>
+          <div id="dynamicTopics" class="topics-grid" style="display: flex; flex-wrap: wrap; gap: 0.75rem;"></div>
+        </div>
+
+        <button id="generateBtn" class="btn-primary"
+          style="width: 100%; height: 56px; font-size: 1.1rem; border-radius: 16px;">
+          <i class="fas fa-wand-magic-sparkles"></i> Generate Personalized Journey
+        </button>
+      </div>
+
+      <div id="roadmapContent" style="margin-top: 3rem;">
+        <div class="loading"
+          style="text-align: center; color: var(--text-muted); font-size: 1.1rem; padding: 4rem; background: var(--surface); border-radius: 24px; border: 1px dashed var(--primary-light);">
+          <i class="fas fa-rocket fa-3x"
+            style="margin-bottom: 1.5rem; color: var(--primary-light); display: block;"></i>
+          Ready to chart your course? Adjust the filters and hit generate!
+        </div>
+      </div>
     </div>
   </div>
 
   <script type="module" src="js/roadmap.js"></script>
 </body>
+
 </html>

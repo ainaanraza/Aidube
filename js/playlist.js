@@ -64,28 +64,45 @@ async function loadPlaylist(pageToken = "") {
 }
 
 function displayVideos(videos) {
+  videoList.innerHTML = ""; // Clear existing
+  const countElement = document.getElementById("videoCount");
+  if (countElement) countElement.textContent = `${videos.length} Professional Lessons`;
+
   videos.forEach((video, index) => {
     const videoId = video.snippet.resourceId.videoId;
     const videoTitle = video.snippet.title;
-    const thumbnailUrl = video.snippet.thumbnails.default?.url || `https://i.ytimg.com/vi/${videoId}/default.jpg`;
+    const thumbnailUrl = video.snippet.thumbnails.medium?.url || video.snippet.thumbnails.default?.url || `https://i.ytimg.com/vi/${videoId}/mqdefault.jpg`;
 
     const videoItem = document.createElement("div");
     videoItem.className = "video-item";
+    videoItem.id = `video-${videoId}`;
     videoItem.innerHTML = `
-      <img src="${thumbnailUrl}" alt="${videoTitle}" onerror="this.src='https://via.placeholder.com/120x90?text=No+Thumbnail'">
-      <p>${videoTitle}</p>
+      <div class="video-thumbnail">
+        <img src="${thumbnailUrl}" alt="${videoTitle}" onerror="this.src='https://via.placeholder.com/120x90?text=No+Thumbnail'">
+      </div>
+      <div class="video-info">
+        <div class="video-title">${videoTitle}</div>
+        <div style="font-size: 0.7rem; color: var(--text-muted); margin-top: 0.25rem;">
+          <i class="fas fa-play-circle"></i> Lesson ${index + 1}
+        </div>
+      </div>
     `;
-    videoItem.onclick = () => playVideo(videoId, videoTitle);
+    videoItem.onclick = () => {
+      playVideo(videoId, videoTitle);
+      document.querySelectorAll(".video-item").forEach(el => el.classList.remove("active"));
+      videoItem.classList.add("active");
+    };
     videoList.appendChild(videoItem);
 
-    // Auto-play first video if no specific video is requested
     if (index === 0 && !lastVideoId) {
       playVideo(videoId, videoTitle);
+      videoItem.classList.add("active");
     }
 
-    // Auto-play the requested video
     if (lastVideoId && videoId === lastVideoId) {
       playVideo(videoId, videoTitle);
+      videoItem.classList.add("active");
+      videoItem.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
   });
 }
@@ -348,6 +365,34 @@ function createStyledPdf(title, text, shortName = 'notes') {
           doc.setFont("helvetica", "normal");
         }
 
+        // Helper to wrap text manually if it exceeds line width
+        // This is complex for inline rendering. 
+        // Simplified approach: Render line by line using simple text logic won't wrap correctly inline.
+        // Better approach for PDF: use splitTextToSize for the whole line if not bold, 
+        // but for mixed styles, we need to calculate widths.
+
+        // FALLBACK FOR ROBUSTNESS: 
+        // If the line is long, just print it normally. 
+        // If it's short headers/labels, bold works well.
+        // For this implementation, we will apply bold to the whole segment and just wrap.
+        // Note: This simple loop doesn't handle wrapping of mixed flows perfectly.
+
+        // Let's rely on standard splitTextToSize for the segment, but update X.
+        // Actually, properly mixing styles in jsPDF requires advanced coordinates.
+        // Simplified: If the *whole line* looks like a key-value pair "Key: Value", bold the Key.
+        // Or just print the segments.
+
+        // We'll just write the text. If it overflows, it might look messy with this simple logic.
+        // Let's stick to a simpler implementation:
+        // If a line contains **, just remove ** and make the WHOLE line bold if it looks like a header/key,
+        // OR just print it as normal text but strip the **.
+        // The USER ASKED for bold headings. The Header parsing above handles # Headers.
+        // But usually "1. **Main Argument**" needs bolding.
+
+        // REVISED STRATEGY for bold parts:
+        // Just print the text plain for complex lines to avoid overlap, 
+        // BUT if the specific segment is short, print it.
+
         const segmentLines = doc.splitTextToSize(segment, maxLineWidth - (currentX - margin));
 
         // If it's just one line, we print inline
@@ -538,33 +583,27 @@ function injectSaveButton() {
   const headerContainer = document.querySelector(".playlist-header");
   if (!headerContainer) return;
 
-  // Check if button already exists
   if (headerContainer.querySelector(".save-playlist-btn")) return;
 
   const btn = document.createElement("button");
-  btn.className = "save-playlist-btn action-btn"; // reuse action-btn class for style
-  btn.style.marginLeft = "1rem";
-  btn.style.display = "inline-flex";
-  btn.style.alignItems = "center";
-  btn.style.fontSize = "0.9rem";
-  btn.innerHTML = `<i class="fas fa-bookmark"></i> Save Playlist`;
+  btn.className = "save-playlist-btn action-btn";
+  btn.style.marginTop = "0.5rem";
+  btn.style.width = "auto";
+  btn.style.padding = "0.5rem 1rem";
+  btn.style.fontSize = "0.825rem";
+  btn.innerHTML = `<i class="fas fa-bookmark"></i> Save to Dashboard`;
 
-  // Check if already saved to change state initially
   const localPlaylists = JSON.parse(localStorage.getItem("savedPlaylists") || "[]");
   if (localPlaylists.some(p => p.id === playlistId)) {
     btn.innerHTML = `<i class="fas fa-check"></i> Saved`;
+    btn.classList.add("saved-state");
+    btn.style.background = "var(--bg)";
+    btn.style.color = "var(--text-muted)";
+    btn.style.borderColor = "var(--border)";
     btn.disabled = true;
-    btn.style.opacity = "0.7";
   }
 
   btn.onclick = () => savePlaylistToDashboard(btn);
-
-  // Append to h2 or container? The header has an h2. Let's append to header container.
-  // We might want to make the header a flex container if it isn't
-  headerContainer.style.display = "flex";
-  headerContainer.style.alignItems = "center";
-  headerContainer.style.justifyContent = "space-between";
-
   headerContainer.appendChild(btn);
 }
 

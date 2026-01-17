@@ -11,7 +11,7 @@ async function generateTest() {
   // Show loading state
   testContent.innerHTML = `
     <div class="loading-spinner"></div>
-    <h3>Generating questions with Gemini AI...</h3>
+    <h3>Generating questions...</h3>
     <p>Analyzing video content...</p>
   `;
 

@@ -4,8 +4,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Playlist Viewer</title>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <title>Aidube | Learn Smarter</title>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
+    rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
   <link rel="stylesheet" href="css/playlist.css">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -21,9 +22,10 @@
 <body>
   <header>
     <div class="header-content">
-      <h1>Playlist Viewer</h1>
+      <h1>Aidube <span style="font-weight: 300; opacity: 0.7;">Viewer</span></h1>
       <a href="index.html" class="back-button">
-        <span>← Back to Main Page</span>
+        <i class="fas fa-arrow-left"></i>
+        <span>Return to Dashboard</span>
       </a>
     </div>
   </header>
@@ -31,46 +33,57 @@
   <main class="main-content">
     <section class="video-section">
       <div class="video-player" id="videoPlayer">
-        <div class="loading">Loading video...</div>
+        <div class="loading">
+          <div class="spinner"
+            style="border: 4px solid rgba(37, 99, 235, 0.1); border-left-color: var(--primary); border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite;">
+          </div>
+          <style>
+            @keyframes spin {
+              to {
+                transform: rotate(360deg);
+              }
+            }
+          </style>
+          <span style="margin-left: 1rem;">Preparing your lesson...</span>
+        </div>
       </div>
 
       <div class="video-actions">
         <div class="action-group">
-          <h3>Study Aids</h3>
+          <h3>Study Intelligence</h3>
           <div class="action-buttons">
             <button id="notesBtn" class="action-btn">
-              <i class="fas fa-file-pdf"></i> Complete Notes
+              <i class="fas fa-magic"></i> Generate Notes
             </button>
             <button id="summaryBtn" class="action-btn">
-              <i class="fas fa-file-alt"></i> Summary
+              <i class="fas fa-bolt"></i> Quick Summary
             </button>
           </div>
         </div>
 
         <div class="action-group">
-          <h3>Assessment</h3>
+          <h3>Knowledge Check</h3>
           <div class="action-buttons">
             <button id="testBtn" class="action-btn test-btn">
-              <i class="fas fa-clipboard-check"></i> Take Test
+              <i class="fas fa-graduation-cap"></i> Practice Test
             </button>
           </div>
         </div>
       </div>
     </section>
 
-    <section class="playlist-section">
+    <aside class="playlist-section">
       <div class="playlist-header">
-        <h2>Playlist Videos</h2>
+        <h2>Curated Playlist</h2>
+        <p id="videoCount" style="font-size: 0.825rem; color: var(--text-muted); margin-top: 0.25rem;">0 Videos</p>
       </div>
       <div class="video-list" id="videoList">
+        <!-- Videos will be injected here -->
       </div>
-    </section>
+    </aside>
   </main>
 
   <script type="module" src="js/playlist.js"></script>
-
-
-
 </body>
 
 </html>

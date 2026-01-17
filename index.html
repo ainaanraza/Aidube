@@ -6,58 +6,80 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
   <link rel="stylesheet" href="css/index.css">
-  <title>Your Classroom</title>
+  <title>Aidube | Your Modern Classroom</title>
 </head>
 
 <body>
   <header>
-    <div class="header-content" style="justify-content: space-between; padding: 0 2rem;">
-      <div style="display: flex; align-items: center; gap: 1rem;">
+    <div class="header-content">
+      <div class="logo-area" onclick="window.location.href='index.html'">
         <i class="fa-solid fa-chalkboard-user"></i>
         <span>Aidube</span>
       </div>
-      <button id="loginBtn" onclick="window.location.href='login.html'">Login</button>
-      <button id="logoutBtn" style="display:none;">Logout</button>
+      <div class="nav-actions">
+        <div id="userInfo" class="user-profile-header">
+          <div class="user-avatar"><i class="fas fa-user-circle"></i></div>
+          <div class="user-details">
+            <p>Guest Explorer</p>
+            <span>Welcome!</span>
+          </div>
+        </div>
+        <button id="loginBtn" class="btn-primary" onclick="window.location.href='login.html'">
+          <i class="fas fa-sign-in-alt"></i> Login
+        </button>
+        <button id="logoutBtn" class="btn-secondary" style="display:none;">
+          <i class="fas fa-sign-out-alt"></i> Logout
+        </button>
+      </div>
     </div>
   </header>
 
   <div class="container">
-    <div class="sidebar">
-      <div id="userInfo" style="margin-top:1rem;">
-        <p>Not logged in</p>
-      </div>
-      <br></br>
-      <h3>Saved Playlists</h3>
-      <div id="savedPlaylists"></div>
-      <br></br>
-      <button class="clear-button" onclick="clearAllSavedPlaylists()">
-        <i class="fas fa-trash"></i> Clear All Playlists
-      </button>
+    <aside class="sidebar">
 
-      <h3>Saved Roadmaps</h3>
-      <div class="saved-roadmaps" id="savedRoadmaps"></div>
-      <br></br>
-      <button class="clear-button" onclick="clearAllRoadmaps()">
-        <i class="fas fa-trash"></i> Clear All Roadmaps
-      </button>
-    </div>
-
-    <div class="main-content">
-      <div class="search-bar">
-        <input type="text" id="searchInput" placeholder="Search for a topic...">
-        <button onclick="fetchPlaylists()">
-          <i class="fas fa-search"></i> Search
+      <div class="sidebar-card">
+        <h3><i class="fas fa-list-ul"></i> Saved Playlists</h3>
+        <div id="savedPlaylists" class="saved-list"></div>
+        <button class="clear-button btn-ghost" onclick="clearAllSavedPlaylists()">
+          <i class="fas fa-trash-alt"></i> Clear All
         </button>
-        <button onclick="redirectToRoadmap()">
+      </div>
+
+      <div class="sidebar-card">
+        <h3><i class="fas fa-map-marked-alt"></i> Saved Roadmaps</h3>
+        <div id="savedRoadmaps" class="saved-list"></div>
+        <button class="clear-button btn-ghost" onclick="clearAllRoadmaps()">
+          <i class="fas fa-trash-alt"></i> Clear All
+        </button>
+      </div>
+    </aside>
+
+    <main class="main-content">
+      <div class="search-container">
+        <div class="search-input-wrapper">
+          <i class="fas fa-search"></i>
+          <input type="text" id="searchInput" placeholder="What do you want to learn today?">
+        </div>
+        <button class="btn-primary" onclick="fetchPlaylists()">Search</button>
+        <button class="btn-secondary" onclick="redirectToRoadmap()">
           <i class="fas fa-map"></i> Roadmap
         </button>
-        <button onclick="window.location.href='history.html'">
-          <i class="fas fa-clock"></i> History
+        <button class="btn-ghost" onclick="window.location.href='history.html'">
+          <i class="fas fa-history"></i> History
         </button>
       </div>
+
       <div id="lastPlayedContainer"></div>
-      <div class="playlists" id="playlistContainer"></div>
-    </div>
+
+      <div class="playlists-header"
+        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+        <h2 style="font-size: 1.5rem; font-weight: 800; color: var(--text);">Recommended for You</h2>
+      </div>
+
+      <div class="playlists" id="playlistContainer">
+        <!-- Playlists will be injected here -->
+      </div>
+    </main>
   </div>
 
   <script type="module" src="js/index.js"></script>

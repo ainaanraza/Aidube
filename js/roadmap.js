@@ -33,15 +33,28 @@ document.addEventListener("DOMContentLoaded", () => {
     return; // stop here — don’t re-generate
   }
 
-  if (topic) populateTopics(topic);
-
   // Toggle the "previously known" topics container
   const knowledgeSelect = $("#knowledgeSelect");
   const topicsContainer = $("#topicsContainer");
+  let topicsPopulated = false;
+
   if (knowledgeSelect && topicsContainer) {
     knowledgeSelect.addEventListener("change", (e) => {
-      topicsContainer.style.display = e.target.value === "previous" ? "block" : "none";
+      const isPrevious = e.target.value === "previous";
+      topicsContainer.style.display = isPrevious ? "block" : "none";
+
+      if (isPrevious && topic && !topicsPopulated) {
+        populateTopics(topic);
+        topicsPopulated = true;
+      }
     });
+
+    // Handle initial state if browser auto-fills the selection
+    if (knowledgeSelect.value === "previous" && topic) {
+      topicsContainer.style.display = "block";
+      populateTopics(topic);
+      topicsPopulated = true;
+    }
   }
 
   // Attach click listener to Generate button
@@ -142,142 +155,117 @@ async function pickModel(preferred = ["gemini-2.5-flash", "gemini-flash-latest",
   }
 }
 
-// Populate checkboxes dynamically
 async function populateTopics(mainTopic) {
   const container = document.getElementById("dynamicTopics");
   if (!container) return;
 
-  container.innerHTML = `<div class="loading">Fetching related topics...</div>`;
+  container.innerHTML = `<div class="loading" style="padding: 1rem; border: none;"><i class="fas fa-sync fa-spin"></i> Identifying skill clusters...</div>`;
   let topics = await fetchRelatedTopics(mainTopic);
 
-  // Fallback if Gemini fails or returns empty
   if (topics.length === 0) {
-    topics = ["Basics", "Core Concepts", "Applications", "Advanced Techniques"];
+    topics = ["Foundations", "Core Concepts", "Standard Practices", "Advanced Implementation"];
   }
 
   container.innerHTML = "";
   topics.forEach((topic, idx) => {
-    // create stable id by sanitising topic text
     const safeId = `topic-${idx}-${String(topic).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "")}`;
 
-    const wrapper = document.createElement("div");
-    wrapper.className = "topic-checkbox";
-
-    const input = document.createElement("input");
-    input.type = "checkbox";
-    input.value = topic;
-    input.id = safeId;
-    input.setAttribute("aria-label", topic);
-
     const label = document.createElement("label");
+    label.className = "resource-tag";
+    label.style.cursor = "pointer";
+    label.style.display = "flex";
+    label.style.alignItems = "center";
+    label.style.gap = "0.5rem";
     label.htmlFor = safeId;
-    label.textContent = topic;
 
-    // append input before label so CSS can target input:checked + label
-    wrapper.appendChild(input);
-    wrapper.appendChild(label);
-    container.appendChild(wrapper);
+    label.innerHTML = `
+      <input type="checkbox" value="${topic}" id="${safeId}" style="accent-color: var(--primary);">
+      <span>${topic}</span>
+    `;
+
+    container.appendChild(label);
   });
 }
 
 
 
-// Main function that generates roadmap using filters
 async function generateRoadmap(topic) {
   const roadmapContainer = document.getElementById("roadmapContent");
   try {
-    // Show loading UI
-    roadmapContainer.innerHTML = `<div class="loading">
-    <i class="fas fa-spinner fa-spin"></i> Generating roadmap...
-  </div>`;
+    roadmapContainer.innerHTML = `
+      <div class="loading" style="padding: 4rem; border: 1px dashed var(--primary); background: var(--surface); border-radius: 24px;">
+        <i class="fas fa-compass fa-spin fa-3x" style="margin-bottom: 1.5rem; color: var(--primary); display: block;"></i>
+        <div style="font-weight: 700; color: var(--text); font-size: 1.25rem;">Designing Your Learning Path</div>
+        <p style="color: var(--text-muted); margin-top: 0.5rem;">Analyzing millions of educational data points...</p>
+      </div>`;
 
-    // Read filter values (safe guards if elements missing)
     const levelEl = document.getElementById("levelSelect");
     const knowledgeEl = document.getElementById("knowledgeSelect");
     const level = levelEl ? levelEl.value : "beginner";
     const knowledge = knowledgeEl ? knowledgeEl.value : "new";
 
-    // If previously known -> collect excluded topics
     let excludedTopics = [];
     if (knowledge === "previous") {
-      excludedTopics = Array.from(document.querySelectorAll("#topicsContainer input[type='checkbox']:checked"))
+      excludedTopics = Array.from(document.querySelectorAll("#dynamicTopics input[type='checkbox']:checked"))
         .map(cb => cb.value);
     }
 
-    // Build prompt that includes level + exclusions
     let prompt = `Create a ${level} level learning roadmap for: ${topic}.`;
     if (knowledge === "previous" && excludedTopics.length > 0) {
       prompt += ` Exclude these topics: ${excludedTopics.join(", ")}.`;
     }
     prompt += " Provide the roadmap as short ordered/bullet steps, each on a new line.";
 
-    // Call the generative model
     const genAI = new GoogleGenerativeAI(API_KEY);
-    const preferredModel = "gemini-2.5-flash"; // or dynamically chosen from listModels()
-    const model = genAI.getGenerativeModel({ model: preferredModel });
+    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
     const result = await model.generateContent(prompt);
-    const response = await result.response.text();
+    const responseText = await result.response.text();
 
-    // result.response.text() can be async — await it when available
-    const responseText = (result && result.response && typeof result.response.text === "function")
-      ? await result.response.text()
-      : (result && result.response) ? String(result.response) : "";
-
-    roadmapContainer.innerHTML = ""; // clear loading
+    roadmapContainer.innerHTML = "";
 
     if (!responseText || responseText.trim() === "") {
       roadmapContainer.innerHTML = `<div class="error-message">Unable to generate roadmap. Please check your API key and network.</div>`;
       return;
     }
 
-    // Parse into steps (strip leading bullets/numbers and empty lines)
     const steps = responseText
       .split(/\r?\n/)
       .map(sanitizeText)
-      .filter(s => s !== "");
+      .filter(s => s !== "" && !s.toLowerCase().includes("roadmap") && !s.toLowerCase().includes("learning"));
 
-
-    // Build DOM
-    const roadmapTree = document.createElement("div");
-    roadmapTree.className = "roadmap-tree";
+    const container = document.createElement("div");
+    container.className = "roadmap-container";
 
     steps.forEach((step, index) => {
-      const isMainTopic = !step.startsWith("-");
-      const mainTopic = sanitizeText(step.split(":")[0]);
+      const mainTopic = sanitizeText(step.split(":")[0]).replace(/^\d+\.\s*/, "").replace(/^-\s*/, "");
 
-      const roadmapStep = document.createElement("div");
-      roadmapStep.className = "roadmap-step";
-      roadmapStep.style.animationDelay = `${index * 0.12}s`;
-      roadmapStep.innerHTML = `
-        <p>${step}</p>
-        ${isMainTopic ? `<a href="index.html?search=${encodeURIComponent(mainTopic)}">
-          Explore Playlist
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M5 12h14M12 5l7 7-7 7"/>
-          </svg>
-        </a>` : ""}
+      const item = document.createElement("div");
+      item.className = "roadmap-item animate__animated animate__fadeInUp";
+      item.style.animationDelay = `${index * 0.1}s`;
+      item.innerHTML = `
+        <span class="roadmap-step">Milestone ${index + 1}</span>
+        <h3 class="roadmap-title">${mainTopic}</h3>
+        <p class="roadmap-desc">${step}</p>
+        <button class="btn-primary" onclick="window.location.href='index.html?search=${encodeURIComponent(mainTopic)}'">
+          <i class="fas fa-play-circle"></i> Start Learning
+        </button>
       `;
-      roadmapTree.appendChild(roadmapStep);
+      container.appendChild(item);
     });
 
-    roadmapContainer.appendChild(roadmapTree);
+    roadmapContainer.appendChild(container);
 
-    // Add Save button (uses saveRoadmap below)
     const saveButton = document.createElement("button");
-    saveButton.className = "save-roadmap-button";
-    saveButton.innerHTML = `
-      Save Your Journey
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-left:8px">
-        <path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/>
-        <polyline points="17 21 17 13 7 13 7 21"/>
-        <polyline points="7 3 7 8 15 8"/>
-      </svg>
-    `;
+    saveButton.className = "btn-secondary";
+    saveButton.style.marginTop = "2rem";
+    saveButton.style.width = "100%";
+    saveButton.style.justifyContent = "center";
+    saveButton.style.padding = "1rem";
+    saveButton.innerHTML = `<i class="fas fa-bookmark"></i> Save This Entire Journey`;
     saveButton.onclick = () => saveRoadmap(topic, steps);
     roadmapContainer.appendChild(saveButton);
 
   } catch (err) {
-    // generateRoadmap error
     roadmapContainer.innerHTML = `<div class="error-message">Error generating roadmap. Open browser console for details.</div>`;
   }
 }
@@ -362,26 +350,26 @@ function renderSavedRoadmap(topic, steps) {
   const roadmapContainer = document.getElementById("roadmapContent");
   roadmapContainer.innerHTML = "";
 
-  const roadmapTree = document.createElement("div");
-  roadmapTree.className = "roadmap-tree";
+  const container = document.createElement("div");
+  container.className = "roadmap-container";
 
   steps.forEach((step, index) => {
-    const roadmapStep = document.createElement("div");
-    roadmapStep.className = "roadmap-step";
-    roadmapStep.style.animationDelay = `${index * 0.1}s`;
-    roadmapStep.innerHTML = `
-      <p>${step}</p>
-      <a href="index.html?search=${encodeURIComponent(step.split(":")[0])}">
-        Explore Playlist
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M5 12h14M12 5l7 7-7 7"/>
-        </svg>
-      </a>
+    const mainTopic = sanitizeText(step.split(":")[0]).replace(/^\d+\.\s*/, "").replace(/^-\s*/, "");
+    const item = document.createElement("div");
+    item.className = "roadmap-item animate__animated animate__fadeInUp";
+    item.style.animationDelay = `${index * 0.1}s`;
+    item.innerHTML = `
+      <span class="roadmap-step">Step ${index + 1}</span>
+      <h3 class="roadmap-title">${mainTopic}</h3>
+      <p class="roadmap-desc">${step}</p>
+      <button class="btn-primary" onclick="window.location.href='index.html?search=${encodeURIComponent(mainTopic)}'">
+        <i class="fas fa-play-circle"></i> Continue Skill
+      </button>
     `;
-    roadmapTree.appendChild(roadmapStep);
+    container.appendChild(item);
   });
 
-  roadmapContainer.appendChild(roadmapTree);
+  roadmapContainer.appendChild(container);
 }
 
 

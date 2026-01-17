@@ -57,19 +57,20 @@ function redirectToRoadmap() {
 
 function renderLastPlayed() {
   const container = document.getElementById("lastPlayedContainer");
-  if (!container) return; // Add this line to exit if container doesn't exist
+  if (!container) return;
 
   if (lastPlayedVideo) {
     const thumbnailUrl = `https://img.youtube.com/vi/${lastPlayedVideo.videoId}/hqdefault.jpg`;
     container.innerHTML = `
-      <div class="last-played compact-last">
-        <div class="last-thumb">
-          <img src="${thumbnailUrl}" alt="${lastPlayedVideo.title}" onerror="this.src='https://via.placeholder.com/120x70?text=No+Thumbnail'">
+      <div class="last-played-banner">
+        <div class="last-played-thumb">
+          <img src="${thumbnailUrl}" alt="${lastPlayedVideo.title}" onerror="this.src='https://via.placeholder.com/180x100?text=No+Thumbnail'">
         </div>
-        <div class="last-info">
-          <div class="last-title">${lastPlayedVideo.title}</div>
-          <button class="last-resume-btn" onclick="resumeLastPlayed()">
-            <i class="fas fa-play"></i> Resume
+        <div class="last-played-info">
+          <p style="text-transform: uppercase; font-size: 0.7rem; font-weight: 800; letter-spacing: 0.1em; opacity: 0.8; margin-bottom: 0.25rem;">Continue Journey</p>
+          <h4>${lastPlayedVideo.title}</h4>
+          <button class="btn-secondary" style="background: white; color: var(--primary); border: none;" onclick="resumeLastPlayed()">
+            <i class="fas fa-play"></i> Resume Lesson
           </button>
         </div>
       </div>
@@ -129,15 +130,19 @@ function updateSavedPlaylists() {
   const playlists = JSON.parse(localStorage.getItem("savedPlaylists")) || [];
   div.innerHTML = playlists.length
     ? playlists.map((p, i) => `
-      <div>
-        <span>${p.title}</span>
-        <div>
-          <button onclick="redirectToPlaylistPage('${p.id}','${p.title}')">View</button>
-          <button onclick="removeSavedPlaylist(${i})">Delete</button>
+      <div class="saved-item">
+        <div class="saved-item-title">${p.title}</div>
+        <div class="saved-item-info">
+          <button class="btn-ghost" style="padding: 0.25rem 0.5rem; font-size: 0.75rem;" onclick="redirectToPlaylistPage('${p.id}','${p.title}')">
+            <i class="fas fa-external-link-alt"></i> View
+          </button>
+          <button class="btn-ghost" style="padding: 0.25rem 0.5rem; font-size: 0.75rem; color: #ef4444;" onclick="removeSavedPlaylist(${i})">
+            <i class="fas fa-trash"></i>
+          </button>
         </div>
       </div>
     `).join("")
-    : "<p>No saved playlists available.</p>";
+    : "<p style='font-size: 0.825rem; color: var(--text-muted); text-align: center;'>No saved playlists</p>";
 }
 
 
@@ -184,9 +189,8 @@ function renderPlaylists(playlists) {
   container.innerHTML = "";
 
   playlists.forEach(item => {
-    // Only process actual playlists, not videos
     if (!item.id.playlistId || !isValidPlaylistId(item.id.playlistId)) {
-      return; // Skip this item
+      return;
     }
 
     const playlistId = item.id.playlistId;
@@ -195,18 +199,25 @@ function renderPlaylists(playlists) {
     const channelTitle = item.snippet.channelTitle;
 
     const playlistElement = document.createElement("div");
-    playlistElement.className = "playlist-item";
+    playlistElement.className = "playlist-card";
     playlistElement.innerHTML = `
-      <img src="${thumbnail}" alt="${playlistTitle}" class="playlist-thumbnail">
-      <div class="playlist-content">
-        <div class="playlist-title">${playlistTitle}</div>
-        <div class="playlist-channel">${channelTitle}</div>
-        <div class="playlist-buttons">
-          <button onclick="redirectToPlaylistPage('${playlistId}', '${playlistTitle}', '${thumbnail}')">
-            <i class="fas fa-play"></i> View
+      <div class="thumbnail-container">
+        <img src="${thumbnail}" alt="${playlistTitle}">
+        <div class="video-count-badge">
+          <i class="fas fa-list"></i> Playlist
+        </div>
+      </div>
+      <div class="card-content">
+        <div class="card-title">${playlistTitle}</div>
+        <div class="card-meta">
+          <span><i class="fas fa-user-circle"></i> ${channelTitle}</span>
+        </div>
+        <div style="display: flex; gap: 0.5rem; margin-top: 1rem;">
+          <button class="btn-primary" style="flex: 1; justify-content: center;" onclick="redirectToPlaylistPage('${playlistId}', '${playlistTitle}', '${thumbnail}')">
+            Play
           </button>
-          <button onclick="savePlaylist('${playlistTitle}', '${playlistId}')">
-            <i class="fas fa-bookmark"></i> Save
+          <button class="btn-secondary" style="padding: 0.5rem;" onclick="savePlaylist('${playlistTitle}', '${playlistId}')">
+            <i class="fas fa-bookmark"></i>
           </button>
         </div>
       </div>
@@ -349,17 +360,22 @@ function clearAllLectureHistory() {
 function updateSavedRoadmaps() {
   const roadmaps = JSON.parse(localStorage.getItem("savedRoadmaps")) || [];
   const div = document.getElementById("savedRoadmaps");
+  if (!div) return;
   div.innerHTML = roadmaps.length
     ? roadmaps.map((r, i) => `
-      <div>
-        <span>${r.topic}</span>
-        <div>
-          <button onclick="viewSavedRoadmap('${r.topic}')">View</button>
-          <button onclick="deleteSavedRoadmap(${i})">Delete</button>
+      <div class="saved-item">
+        <div class="saved-item-title">${r.topic}</div>
+        <div class="saved-item-info">
+          <button class="btn-ghost" style="padding: 0.25rem 0.5rem; font-size: 0.75rem;" onclick="viewSavedRoadmap('${r.topic}')">
+            <i class="fas fa-map-marked-alt"></i> Journey
+          </button>
+          <button class="btn-ghost" style="padding: 0.25rem 0.5rem; font-size: 0.75rem; color: #ef4444;" onclick="deleteSavedRoadmap(${i})">
+            <i class="fas fa-trash"></i>
+          </button>
         </div>
       </div>
     `).join("")
-    : "<p>No saved roadmaps available.</p>";
+    : "<p style='font-size: 0.825rem; color: var(--text-muted); text-align: center'>No journeys saved</p>";
 }
 
 function viewSavedRoadmap(topic) {
@@ -543,27 +559,37 @@ onAuthStateChanged(auth, (user) => {
   const logoutBtn = document.getElementById("logoutBtn");
 
   if (user) {
-    // Reload user to get latest profile updates (like displayName)
     user.reload().then(() => {
       if (userInfo) {
         userInfo.innerHTML = `
-          <img src="${user.photoURL || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(user.displayName || 'User') + '&background=random'}" style="width:50px;border-radius:50%">
-          <p>${user.displayName || "User"}</p>
-          <p style="font-size:0.9em;color:#555">${user.email}</p>
+          <div class="user-avatar">
+            <img src="${user.photoURL || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(user.displayName || 'User') + '&background=random'}" style="width:100%; height:100%; border-radius:50%">
+          </div>
+          <div class="user-details">
+            <p>${user.displayName || "Learner"}</p>
+            <span>${user.email}</span>
+          </div>
         `;
       }
     });
 
     if (loginBtn) loginBtn.style.display = "none";
-    if (logoutBtn) logoutBtn.style.display = "inline-block";
+    if (logoutBtn) logoutBtn.style.display = "inline-flex";
 
-    // 🔄 Start real-time Firestore syncing
     watchUserRoadmaps()
     watchUserHistory()
 
   } else {
-    if (userInfo) userInfo.textContent = "Not logged in";
-    if (loginBtn) loginBtn.style.display = "inline-block";
+    if (userInfo) {
+      userInfo.innerHTML = `
+        <div class="user-avatar"><i class="fas fa-user-circle"></i></div>
+        <div class="user-details">
+          <p>Guest Explorer</p>
+          <span>Sign in for full access</span>
+        </div>
+      `;
+    }
+    if (loginBtn) loginBtn.style.display = "inline-flex";
     if (logoutBtn) logoutBtn.style.display = "none";
   }
 });
@@ -676,6 +702,9 @@ window.updateLectureHistory = updateLectureHistory;
 window.viewSavedRoadmap = viewSavedRoadmap;
 window.deleteSavedRoadmap = deleteSavedRoadmap;
 window.clearAllRoadmaps = clearAllRoadmaps;
+window.removeSavedPlaylist = removeSavedPlaylist;
+window.updateSavedPlaylists = updateSavedPlaylists;
+window.resumeLastPlayed = resumeLastPlayed;
 window.removeSavedPlaylist = removeSavedPlaylist;
 window.updateSavedPlaylists = updateSavedPlaylists;
 window.resumeLastPlayed = resumeLastPlayed;

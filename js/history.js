@@ -111,29 +111,35 @@ function updateLectureHistory() {
     if (!historyDiv) return;
 
     if (lectureHistory.length === 0) {
-        historyDiv.innerHTML = "<p>No lecture history available.</p>";
+        historyDiv.innerHTML = `
+            <div style="text-align: center; padding: 4rem; color: var(--text-muted);">
+                <i class="fas fa-ghost fa-3x" style="margin-bottom: 1rem; opacity: 0.5;"></i>
+                <p>No history found yet. Start exploring playlists to see them here!</p>
+            </div>`;
         return;
     }
 
     historyDiv.innerHTML = lectureHistory.map((item, index) => {
         const safeTitle = item.title.replace(/'/g, "\\'").replace(/"/g, '\\"');
         return `
-        <div class="history-item">
-            <img src="${item.thumbnail}" 
-                 alt="${item.title}" 
-                 class="history-thumb"
-                 onerror="this.src='https://via.placeholder.com/120x70?text=No+Image'">
-            <div class="history-info">
-                <p class="history-title">${item.title}</p>
-                <div class="history-actions">
-                    <button onclick="redirectToPlaylistPage('${item.id}', '${safeTitle}')">
-                        <i class="fas fa-play"></i> View
+        <div class="history-item" style="background: var(--surface); backdrop-filter: blur(8px); border: 1px solid var(--glass-border); border-radius: var(--radius-lg); padding: 1.25rem; margin-bottom: 1.5rem; display: flex; gap: 1.5rem; transition: var(--transition); box-shadow: var(--shadow);">
+            <div class="history-thumb-wrapper" style="width: 160px; aspect-ratio: 16/9; border-radius: var(--radius); overflow: hidden; flex-shrink: 0; box-shadow: var(--shadow-sm);">
+                <img src="${item.thumbnail}" 
+                     alt="${item.title}" 
+                     style="width: 100%; height: 100%; object-fit: cover;"
+                     onerror="this.src='https://via.placeholder.com/160x90?text=No+Image'">
+            </div>
+            <div class="history-info" style="flex: 1; display: flex; flex-direction: column; justify-content: center;">
+                <p class="history-title" style="font-weight: 700; color: var(--text); font-size: 1.1rem; margin-bottom: 0.75rem;">${item.title}</p>
+                <div class="history-actions" style="display: flex; gap: 0.75rem;">
+                    <button class="btn-primary" style="padding: 0.5rem 1rem;" onclick="redirectToPlaylistPage('${item.id}', '${safeTitle}')">
+                        <i class="fas fa-play"></i> Resume
                     </button>
-                    <button onclick="removeLectureHistory(${index})">
-                        <i class="fas fa-trash"></i> Delete
-                    </button>
-                    <button onclick="savePlaylist('${safeTitle}', '${item.id}')">
+                    <button class="btn-secondary" style="padding: 0.5rem 1rem;" onclick="savePlaylist('${safeTitle}', '${item.id}')">
                         <i class="fas fa-bookmark"></i> Save
+                    </button>
+                    <button class="btn-ghost" style="padding: 0.5rem 1rem; color: #ef4444;" onclick="removeLectureHistory(${index})">
+                        <i class="fas fa-trash-alt"></i>
                     </button>
                 </div>
             </div>
