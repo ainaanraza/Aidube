@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,6 +8,7 @@
   <link rel="stylesheet" href="css/index.css">
   <title>Your Classroom</title>
 </head>
+
 <body>
   <header>
     <div class="header-content" style="justify-content: space-between; padding: 0 2rem;">
@@ -18,7 +20,7 @@
       <button id="logoutBtn" style="display:none;">Logout</button>
     </div>
   </header>
-  
+
   <div class="container">
     <div class="sidebar">
       <div id="userInfo" style="margin-top:1rem;">
@@ -31,7 +33,7 @@
       <button class="clear-button" onclick="clearAllSavedPlaylists()">
         <i class="fas fa-trash"></i> Clear All Playlists
       </button>
-      
+
       <h3>Saved Roadmaps</h3>
       <div class="saved-roadmaps" id="savedRoadmaps"></div>
       <br></br>
@@ -39,7 +41,7 @@
         <i class="fas fa-trash"></i> Clear All Roadmaps
       </button>
     </div>
-    
+
     <div class="main-content">
       <div class="search-bar">
         <input type="text" id="searchInput" placeholder="Search for a topic...">
@@ -49,15 +51,16 @@
         <button onclick="redirectToRoadmap()">
           <i class="fas fa-map"></i> Roadmap
         </button>
-      <button onclick="window.location.href='history.html'">
-        <i class="fas fa-clock"></i> History
-      </button>
+        <button onclick="window.location.href='history.html'">
+          <i class="fas fa-clock"></i> History
+        </button>
       </div>
       <div id="lastPlayedContainer"></div>
       <div class="playlists" id="playlistContainer"></div>
     </div>
   </div>
-  
+
   <script type="module" src="js/index.js"></script>
 </body>
+
 </html>

@@ -1,9 +1,8 @@
-
 import { auth, db } from "./firebase.js";
 import { doc, setDoc, getDoc, getDocs, collection, deleteDoc, query, orderBy, addDoc, onSnapshot }
-from "https://www.gstatic.com/firebasejs/12.5.0/firebase-firestore.js";
+  from "https://www.gstatic.com/firebasejs/12.5.0/firebase-firestore.js";
 import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-auth.js";
-
+import { getYouTubeApiKey, rotateYouTubeKey, isValidPlaylistId, retryOperation } from "./utils.js";
 
 const lectureHistory = JSON.parse(localStorage.getItem("lectureHistory")) || [];
 const savedPlaylists = JSON.parse(localStorage.getItem("savedPlaylists")) || [];
@@ -31,20 +30,21 @@ async function loadPlaylistsFromCloud() {
 }
 
 async function clearAllSavedPlaylists() {
-    localStorage.removeItem("savedPlaylists");
-    updateSavedPlaylists();
+  localStorage.removeItem("savedPlaylists");
+  updateSavedPlaylists();
 
-    const user = auth.currentUser;
-    if (user) {
+  const user = auth.currentUser;
+  if (user) {
+    try {
       const snap = await getDocs(collection(db, "users", user.uid, "playlists"));
       for (const docSnap of snap.docs) {
         await deleteDoc(docSnap.ref);
       }
-  
+    } catch (e) {
+      // Firestore clear playlists failed
+    }
+  }
 }
-}
-
-
 
 function redirectToRoadmap() {
   const query = document.getElementById("searchInput").value;
@@ -124,8 +124,8 @@ function updateLectureHistory() {
 
 
 function updateSavedPlaylists() {
-   const div = document.getElementById("savedPlaylists");
-  if (!div) return; 
+  const div = document.getElementById("savedPlaylists");
+  if (!div) return;
   const playlists = JSON.parse(localStorage.getItem("savedPlaylists")) || [];
   div.innerHTML = playlists.length
     ? playlists.map((p, i) => `
@@ -141,37 +141,42 @@ function updateSavedPlaylists() {
 }
 
 
-function fetchPlaylists() {
+async function fetchPlaylists() {
   const searchQuery = document.getElementById("searchInput").value;
-  const apiKey = "AIzaSyB8qZ_7Z7miBrUeo2cRDE6aPwyhe5TVCo8";
-  const url = `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${searchQuery}&type=playlist&key=${apiKey}&maxResults=50`;
-
   const container = document.getElementById("playlistContainer");
   container.innerHTML = "<p>Loading playlists...</p>";
 
-  fetch(url)
-    .then(response => response.json())
-    .then(data => {
-      if (!data.items || data.items.length === 0) {
-        container.innerHTML = "<p>No playlists found.</p>";
-        return;
+  try {
+    const data = await retryOperation(async () => {
+      const url = `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${searchQuery}&type=playlist&key=${getYouTubeApiKey()}&maxResults=50`;
+      const response = await fetch(url);
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(`YouTube API error: ${response.status} - ${errorData.error?.message || response.statusText}`);
       }
+      return await response.json();
+    }, 3, 1000, rotateYouTubeKey);
 
+    if (!data.items || data.items.length === 0) {
+      container.innerHTML = "<p>No playlists found.</p>";
+      return;
+    }
 
-      const user = auth.currentUser;
-      if (user) {
-        setDoc(doc(db, "users", user.uid, "lastSearch", "latest"), {
-          query: searchQuery,
-          results: data.items
-        }).catch(error => console.error("Error saving last search to Firestore:", error));
-      }
+    const user = auth.currentUser;
+    if (user) {
+      setDoc(doc(db, "users", user.uid, "lastSearch", "latest"), {
+        query: searchQuery,
+        results: data.items
+      }).catch(() => { });
+    }
 
-      renderPlaylists(data.items);
-    })
-    .catch(error => {
-      console.error("Error fetching playlists:", error);
-      container.innerHTML = `<p>Error fetching playlists: ${error.message}</p>`;
-    });
+    renderPlaylists(data.items);
+
+  } catch (error) {
+    // Error fetching playlists
+    container.innerHTML = `<p>Error fetching playlists: ${error.message}</p>`;
+  }
 }
 
 function renderPlaylists(playlists) {
@@ -223,15 +228,10 @@ function redirectToPlaylistPage(playlistId, title, thumbnail) {
   window.location.href = `playlist.html?playlistId=${playlistId}`;
 }
 
-
-function isValidPlaylistId(id) {
-  return id && id.length > 11 && (id.startsWith('PL') || id.startsWith('UU') || id.startsWith('FL'));
-}
-
 async function saveToLectureHistory(title, id, thumbnailUrl = null) {
   // Validate playlist ID before saving
   if (!isValidPlaylistId(id)) {
-    console.warn(`Invalid playlist ID "${id}" - not saving to history`);
+    // Invalid playlist ID
     return;
   }
 
@@ -243,17 +243,21 @@ async function saveToLectureHistory(title, id, thumbnailUrl = null) {
   if (!existing) {
     history.unshift({ title, id, thumbnail, playedAt: Date.now() });
     localStorage.setItem("lectureHistory", JSON.stringify(history));
-    updateLectureHistory(); 
+    updateLectureHistory();
   }
 
   const user = auth.currentUser;
   if (user) {
-    await setDoc(doc(db, "users", user.uid, "history", id), {
-      title,
-      id,
-      thumbnail,
-      playedAt: Date.now()
-    }, { merge: true });
+    try {
+      await setDoc(doc(db, "users", user.uid, "history", id), {
+        title,
+        id,
+        thumbnail,
+        playedAt: Date.now()
+      }, { merge: true });
+    } catch (e) {
+      // Firestore save history failed
+    }
   }
 }
 
@@ -262,9 +266,9 @@ async function savePlaylist(title, id) {
   try {
     // Decode any encoded characters in title
     const decodedTitle = decodeURIComponent(title.replace(/&#(\d+);/g, (match, dec) => String.fromCharCode(dec)));
-    
+
     const playlists = JSON.parse(localStorage.getItem("savedPlaylists")) || [];
-    
+
     if (!playlists.some(p => p.id === id)) {
       playlists.push({ title: decodedTitle, id, savedAt: Date.now() });
       localStorage.setItem("savedPlaylists", JSON.stringify(playlists));
@@ -278,13 +282,13 @@ async function savePlaylist(title, id) {
     const user = auth.currentUser;
     if (user) {
       await setDoc(doc(db, "users", user.uid, "playlists", id), {
-        title: decodedTitle, 
-        id, 
+        title: decodedTitle,
+        id,
         savedAt: Date.now(),
       }, { merge: true });
     }
   } catch (error) {
-    console.error("Error saving playlist:", error);
+    // Error saving playlist
     showNotification("Error saving playlist", "error");
   }
 }
@@ -303,9 +307,9 @@ async function removeSavedPlaylist(index) {
   if (user && removed?.id) {
     try {
       await deleteDoc(doc(db, "users", user.uid, "playlists", removed.id));
-      console.log(` Playlist "${removed.title}" deleted from Firestore`);
+      // Playlist deleted from Firestore
     } catch (e) {
-      console.error("Firestore delete failed:", e);
+      // Firestore delete failed
     }
   }
 }
@@ -314,26 +318,26 @@ async function removeSavedPlaylist(index) {
 
 
 
-window.removeLectureHistory = async function(index) {
-    const lectureHistory = JSON.parse(localStorage.getItem("lectureHistory")) || [];
-    const removedItem = lectureHistory[index];
-    
-    // Remove from local storage
-    lectureHistory.splice(index, 1);
-    localStorage.setItem("lectureHistory", JSON.stringify(lectureHistory));
-    updateLectureHistory();
+window.removeLectureHistory = async function (index) {
+  const lectureHistory = JSON.parse(localStorage.getItem("lectureHistory")) || [];
+  const removedItem = lectureHistory[index];
 
-    // Remove from Firestore to prevent real-time listener from re-adding it
-    const user = auth.currentUser;
-    if (user && removedItem?.id) {
-        try {
-            await deleteDoc(doc(db, "users", user.uid, "history", removedItem.id));
-            console.log(`Removed "${removedItem.title}" from Firestore history`);
-        } catch (error) {
-            console.error("Error removing from Firestore:", error);
-            showNotification("Error removing from cloud history", "error");
-        }
+  // Remove from local storage
+  lectureHistory.splice(index, 1);
+  localStorage.setItem("lectureHistory", JSON.stringify(lectureHistory));
+  updateLectureHistory();
+
+  // Remove from Firestore to prevent real-time listener from re-adding it
+  const user = auth.currentUser;
+  if (user && removedItem?.id) {
+    try {
+      await deleteDoc(doc(db, "users", user.uid, "history", removedItem.id));
+      // Removed from Firestore history
+    } catch (error) {
+      // Error removing from Firestore
+      showNotification("Error removing from cloud history", "error");
     }
+  }
 };
 
 function clearAllLectureHistory() {
@@ -370,11 +374,15 @@ async function deleteSavedRoadmap(index) {
 
   const user = auth.currentUser;
   if (user && removed?.topic) {
-    const snap = await getDocs(collection(db, "users", user.uid, "roadmaps"));
-    snap.forEach(async docSnap => {
-      const data = docSnap.data();
-      if (data.topic === removed.topic) await deleteDoc(docSnap.ref);
-    });
+    try {
+      const snap = await getDocs(collection(db, "users", user.uid, "roadmaps"));
+      snap.forEach(async docSnap => {
+        const data = docSnap.data();
+        if (data.topic === removed.topic) await deleteDoc(docSnap.ref);
+      });
+    } catch (e) {
+      // Firestore delete roadmap failed
+    }
   }
 }
 
@@ -385,8 +393,12 @@ async function clearAllRoadmaps() {
 
   const user = auth.currentUser;
   if (user) {
-    const snap = await getDocs(collection(db, "users", user.uid, "roadmaps"));
-    snap.forEach(async d => await deleteDoc(d.ref));
+    try {
+      const snap = await getDocs(collection(db, "users", user.uid, "roadmaps"));
+      snap.forEach(async d => await deleteDoc(d.ref));
+    } catch (e) {
+      // Firestore clear roadmaps failed
+    }
   }
 }
 
@@ -395,36 +407,36 @@ const activeQuery = params.get("search");
 
 if (!activeQuery) {
   const searchInput = document.getElementById("searchInput");
-if (auth.currentUser && searchInput) {
-  // Load last search from Firestore
-  const docRef = doc(db, "users", auth.currentUser.uid, "lastSearch", "latest");
-  getDoc(docRef)
-    .then(docSnap => {
-      if (docSnap.exists()) {
-        const data = docSnap.data();
-        searchInput.value = data.query;
-        renderPlaylists(data.results);
-      }
-    })
-    .catch(error => console.error("Error fetching last search from Firestore:", error));
-} else if (searchInput) {
-  // Fallback to localStorage (if no logged-in user or if desired)
-  const savedResults = localStorage.getItem("lastSearchResults");
-  const savedQuery = localStorage.getItem("lastSearchQuery");
-  if (savedResults && savedQuery) {
-    searchInput.value = savedQuery;
-    renderPlaylists(JSON.parse(savedResults));
+  if (auth.currentUser && searchInput) {
+    // Load last search from Firestore
+    const docRef = doc(db, "users", auth.currentUser.uid, "lastSearch", "latest");
+    getDoc(docRef)
+      .then(docSnap => {
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          searchInput.value = data.query;
+          renderPlaylists(data.results);
+        }
+      })
+      .catch(() => { });
+  } else if (searchInput) {
+    // Fallback to localStorage (if no logged-in user or if desired)
+    const savedResults = localStorage.getItem("lastSearchResults");
+    const savedQuery = localStorage.getItem("lastSearchQuery");
+    if (savedResults && savedQuery) {
+      searchInput.value = savedQuery;
+      renderPlaylists(JSON.parse(savedResults));
+    }
   }
-}
 
 }
 
 
 function showNotification(message, type = 'info') {
-    // Create notification element
-    const notification = document.createElement('div');
-    notification.className = `notification ${type}`;
-    notification.style.cssText = `
+  // Create notification element
+  const notification = document.createElement('div');
+  notification.className = `notification ${type}`;
+  notification.style.cssText = `
         position: fixed;
         top: 20px;
         right: 20px;
@@ -438,25 +450,25 @@ function showNotification(message, type = 'info') {
         max-width: 300px;
         box-shadow: 0 4px 12px rgba(0,0,0,0.15);
     `;
-    
-    notification.innerHTML = `
+
+  notification.innerHTML = `
         <div style="display: flex; align-items: center; gap: 10px;">
             <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-circle' : 'info-circle'}"></i>
             <span>${message}</span>
         </div>
     `;
-    
-    document.body.appendChild(notification);
-    
-    // Auto remove after 3 seconds
+
+  document.body.appendChild(notification);
+
+  // Auto remove after 3 seconds
+  setTimeout(() => {
+    notification.style.animation = 'slideOut 0.3s ease';
     setTimeout(() => {
-        notification.style.animation = 'slideOut 0.3s ease';
-        setTimeout(() => {
-            if (notification.parentNode) {
-                notification.parentNode.removeChild(notification);
-            }
-        }, 300);
-    }, 3000);
+      if (notification.parentNode) {
+        notification.parentNode.removeChild(notification);
+      }
+    }, 300);
+  }, 3000);
 }
 
 
@@ -482,7 +494,7 @@ onAuthStateChanged(auth, async (user) => {
       updateSavedPlaylists();
     }
   } catch (e) {
-    console.warn("Load cloud playlists failed:", e);
+    // Load cloud playlists failed
   }
 });
 
@@ -497,7 +509,7 @@ onAuthStateChanged(auth, async (user) => {
         title: p.title, id: p.id, savedAt: Date.now()
       }, { merge: true });
     }
-  } catch (e) { console.warn("Playlist migration failed:", e); }
+  } catch (e) { /* Playlist migration failed */ }
 
   // migrate history
   try {
@@ -507,22 +519,22 @@ onAuthStateChanged(auth, async (user) => {
         title: h.title, id: h.id, thumbnail: h.thumbnail || null, playedAt: Date.now()
       }, { merge: true });
     }
-  } catch (e) { console.warn("History migration failed:", e); }
+  } catch (e) { /* History migration failed */ }
 
   // migrate roadmaps
   try {
     const localRoadmaps = JSON.parse(localStorage.getItem("savedRoadmaps") || "[]");
-const snap = await getDocs(collection(db, "users", user.uid, "roadmaps"));
-const existingTopics = snap.docs.map(d => d.data().topic);
+    const snap = await getDocs(collection(db, "users", user.uid, "roadmaps"));
+    const existingTopics = snap.docs.map(d => d.data().topic);
 
-for (const r of localRoadmaps) {
-  if (!existingTopics.includes(r.topic)) {
-    await addDoc(collection(db, "users", user.uid, "roadmaps"), {
-      topic: r.topic, steps: r.steps, savedAt: Date.now()
-    });
-  }
-}
-  } catch (e) { console.warn("Roadmap migration failed:", e); }
+    for (const r of localRoadmaps) {
+      if (!existingTopics.includes(r.topic)) {
+        await addDoc(collection(db, "users", user.uid, "roadmaps"), {
+          topic: r.topic, steps: r.steps, savedAt: Date.now()
+        });
+      }
+    }
+  } catch (e) { /* Roadmap migration failed */ }
 });
 
 onAuthStateChanged(auth, (user) => {
@@ -531,12 +543,17 @@ onAuthStateChanged(auth, (user) => {
   const logoutBtn = document.getElementById("logoutBtn");
 
   if (user) {
-    if (userInfo)
-      userInfo.innerHTML = `
-        <img src="${user.photoURL}" style="width:50px;border-radius:50%">
-        <p>${user.displayName || "User"}</p>
-        <p style="font-size:0.9em;color:#555">${user.email}</p>
-      `;
+    // Reload user to get latest profile updates (like displayName)
+    user.reload().then(() => {
+      if (userInfo) {
+        userInfo.innerHTML = `
+          <img src="${user.photoURL || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(user.displayName || 'User') + '&background=random'}" style="width:50px;border-radius:50%">
+          <p>${user.displayName || "User"}</p>
+          <p style="font-size:0.9em;color:#555">${user.email}</p>
+        `;
+      }
+    });
+
     if (loginBtn) loginBtn.style.display = "none";
     if (logoutBtn) logoutBtn.style.display = "inline-block";
 
@@ -569,60 +586,66 @@ function watchUserRoadmaps() {
     const roadmaps = snap.docs.map(d => d.data());
     localStorage.setItem("savedRoadmaps", JSON.stringify(roadmaps));
     updateSavedRoadmaps();
+  }, (error) => {
+    // Firestore roadmap sync failed
   });
 }
 
 function watchUserHistory() {
-    const user = auth.currentUser;
-    if (!user) return;
-    
-    const ref = collection(db, "users", user.uid, "history");
-    let isFirstSync = true;
-    
-    onSnapshot(ref, (snap) => {
-        const cloudHistory = snap.docs.map(d => ({
-            ...d.data(),
-            // Add document ID for consistency
-            _firestoreId: d.id
-        }));
-        
-        if (isFirstSync) {
-            localStorage.setItem("lectureHistory", JSON.stringify(cloudHistory));
-            updateLectureHistory();
-            isFirstSync = false;
-        } else {
-            // Subsequent updates: merge strategically
-            const localHistory = JSON.parse(localStorage.getItem("lectureHistory") || "[]");
-            
-            // Create a map of local items by ID for quick lookup
-            const localMap = new Map();
-            localHistory.forEach(item => localMap.set(item.id, item));
-            
-            // Merge: cloud items not in local should be added
-            let hasChanges = false;
-            const mergedHistory = [...localHistory];
-            
-            cloudHistory.forEach(cloudItem => {
-                if (!localMap.has(cloudItem.id)) {
-                    // New item from cloud, add it
-                    mergedHistory.unshift(cloudItem);
-                    hasChanges = true;
-                }
-            });
-            
-            if (hasChanges) {
-                localStorage.setItem("lectureHistory", JSON.stringify(mergedHistory));
-                updateLectureHistory();
-            }
+  const user = auth.currentUser;
+  if (!user) return;
+
+  const ref = collection(db, "users", user.uid, "history");
+  let isFirstSync = true;
+
+  onSnapshot(ref, (snap) => {
+    const cloudHistory = snap.docs.map(d => ({
+      ...d.data(),
+      // Add document ID for consistency
+      _firestoreId: d.id
+    }));
+
+    if (isFirstSync) {
+      // First sync: always use cloud data
+      // Initial history sync from cloud
+      localStorage.setItem("lectureHistory", JSON.stringify(cloudHistory));
+      updateLectureHistory();
+      isFirstSync = false;
+    } else {
+      // Subsequent updates: merge strategically
+      const localHistory = JSON.parse(localStorage.getItem("lectureHistory") || "[]");
+
+      // Create a map of local items by ID for quick lookup
+      const localMap = new Map();
+      localHistory.forEach(item => localMap.set(item.id, item));
+
+      // Merge: cloud items not in local should be added
+      let hasChanges = false;
+      const mergedHistory = [...localHistory];
+
+      cloudHistory.forEach(cloudItem => {
+        if (!localMap.has(cloudItem.id)) {
+          // New item from cloud, add it
+          mergedHistory.unshift(cloudItem);
+          hasChanges = true;
         }
-    });
+      });
+      if (hasChanges) {
+        // Merging new items from cloud history
+        localStorage.setItem("lectureHistory", JSON.stringify(mergedHistory));
+        updateLectureHistory();
+      }
+    }
+  }, (error) => {
+    // Firestore history sync failed
+  });
 }
 function cleanupInvalidHistory() {
   const lectureHistory = JSON.parse(localStorage.getItem("lectureHistory")) || [];
   const validHistory = lectureHistory.filter(item => isValidPlaylistId(item.id));
-  
+
   if (validHistory.length !== lectureHistory.length) {
-    console.log(`Cleaned up ${lectureHistory.length - validHistory.length} invalid history entries`);
+    // Cleaned up invalid history entries
     localStorage.setItem("lectureHistory", JSON.stringify(validHistory));
     updateLectureHistory();
   }
@@ -655,8 +678,4 @@ window.deleteSavedRoadmap = deleteSavedRoadmap;
 window.clearAllRoadmaps = clearAllRoadmaps;
 window.removeSavedPlaylist = removeSavedPlaylist;
 window.updateSavedPlaylists = updateSavedPlaylists;
-
-
-
-
-
+window.resumeLastPlayed = resumeLastPlayed;

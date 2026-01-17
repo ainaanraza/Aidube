@@ -1,12 +1,23 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Playlist Viewer</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
   <link rel="stylesheet" href="css/playlist.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script type="importmap">
+    {
+      "imports": {
+        "@google/generative-ai": "https://esm.run/@google/generative-ai"
+      }
+    }
+  </script>
 </head>
+
 <body>
   <header>
     <div class="header-content">
@@ -22,6 +33,29 @@
       <div class="video-player" id="videoPlayer">
         <div class="loading">Loading video...</div>
       </div>
+
+      <div class="video-actions">
+        <div class="action-group">
+          <h3>Study Aids</h3>
+          <div class="action-buttons">
+            <button id="notesBtn" class="action-btn">
+              <i class="fas fa-file-pdf"></i> Complete Notes
+            </button>
+            <button id="summaryBtn" class="action-btn">
+              <i class="fas fa-file-alt"></i> Summary
+            </button>
+          </div>
+        </div>
+
+        <div class="action-group">
+          <h3>Assessment</h3>
+          <div class="action-buttons">
+            <button id="testBtn" class="action-btn test-btn">
+              <i class="fas fa-clipboard-check"></i> Take Test
+            </button>
+          </div>
+        </div>
+      </div>
     </section>
 
     <section class="playlist-section">
@@ -36,6 +70,7 @@
   <script type="module" src="js/playlist.js"></script>
 
 
-  
+
 </body>
+
 </html>

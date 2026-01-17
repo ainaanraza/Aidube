@@ -1,53 +1,258 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Login • Aidube</title>
-  <link rel="stylesheet" href="css/index.css" />
+  <link rel="stylesheet" href="css/login.css" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
 </head>
+
 <body>
-  <div id="loginContainer" style="max-width:480px;margin:8rem auto;text-align:center;background:#fff;padding:2rem;border-radius:12px;border:1px solid #dbeafe;">
-    <h1 style="margin-bottom:1rem;">Sign in to Aidube</h1>
-    <p style="margin-bottom:1.25rem;color:#334155">Use your Google account (YouTube)</p>
-    <button id="loginBtn"><i class="fab fa-youtube"></i> Continue with Google</button>
-    <button id="logoutBtn" style="display:none;margin-left:8px;"><i class="fas fa-sign-out-alt"></i> Logout</button>
+  <header>
+    <div class="header-content">
+      <i class="fa-solid fa-chalkboard-user"></i>
+      <span>Aidube</span>
+    </div>
+  </header>
+
+  <div class="main-container">
+    <div class="login-card">
+      <div id="loginForm">
+        <h1>Welcome Back</h1>
+        <p class="subtitle">Sign in to continue to Aidube</p>
+
+        <div id="loginError" class="error-message"></div>
+
+        <button id="googleLoginBtn" class="btn btn-google">
+          <i class="fab fa-youtube" style="color: #ff0000;"></i> Continue with Google
+        </button>
+
+        <div class="divider">or</div>
+
+        <form id="emailLoginForm">
+          <div class="form-group">
+            <label for="loginEmail">Email Address</label>
+            <input type="email" id="loginEmail" class="form-input" placeholder="name@example.com" required />
+          </div>
+          <div class="form-group">
+            <label for="loginPassword">Password</label>
+            <input type="password" id="loginPassword" class="form-input" placeholder="••••••••" required />
+          </div>
+          <div class="form-group" style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1rem;">
+            <input type="checkbox" id="showLoginPassword" style="width: auto; margin: 0;" />
+            <label for="showLoginPassword" style="margin: 0; font-weight: 400; cursor: pointer; font-size: 0.9rem;">Show
+              Password</label>
+          </div>
+          <button type="submit" class="btn btn-primary">
+            Sign In <i class="fas fa-arrow-right"></i>
+          </button>
+        </form>
+
+        <div class="toggle-text">
+          Don't have an account? <span id="showSignup" class="toggle-link">Sign up</span>
+        </div>
+      </div>
+
+      <div id="signupForm" class="hidden">
+        <h1>Create Account</h1>
+        <p class="subtitle">Join Aidube today</p>
+
+        <div id="signupError" class="error-message"></div>
+
+        <button id="googleSignupBtn" class="btn btn-google">
+          <i class="fab fa-youtube" style="color: #ff0000;"></i> Continue with Google
+        </button>
+
+        <div class="divider">or</div>
+
+        <form id="emailSignupForm">
+          <div class="form-group">
+            <label for="signupUsername">Username</label>
+            <input type="text" id="signupUsername" class="form-input" placeholder="Your Name" required />
+          </div>
+          <div class="form-group">
+            <label for="signupEmail">Email Address</label>
+            <input type="email" id="signupEmail" class="form-input" placeholder="name@example.com" required />
+          </div>
+          <div class="form-group">
+            <label for="signupPassword">Password</label>
+            <input type="password" id="signupPassword" class="form-input" placeholder="Create a password" required />
+          </div>
+          <div class="form-group">
+            <label for="signupConfirmPassword">Confirm Password</label>
+            <input type="password" id="signupConfirmPassword" class="form-input" placeholder="Confirm your password"
+              required />
+          </div>
+          <div class="form-group" style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1rem;">
+            <input type="checkbox" id="showSignupPassword" style="width: auto; margin: 0;" />
+            <label for="showSignupPassword"
+              style="margin: 0; font-weight: 400; cursor: pointer; font-size: 0.9rem;">Show Password</label>
+          </div>
+          <button type="submit" class="btn btn-primary">
+            Create Account <i class="fas fa-user-plus"></i>
+          </button>
+        </form>
+
+        <div class="toggle-text">
+          Already have an account? <span id="showLogin" class="toggle-link">Sign in</span>
+        </div>
+      </div>
+    </div>
   </div>
 
   <script type="module">
-  import { auth, googleProvider } from "./js/firebase.js";
-  import { signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-auth.js";
+    // Global error handler
+    window.onerror = function (msg, url, lineNo, columnNo, error) {
+      // Error logged
+      return false;
+    };
 
-  window.addEventListener("DOMContentLoaded", () => {
-    const loginBtn = document.getElementById("loginBtn");
-    const logoutBtn = document.getElementById("logoutBtn");
+    import { auth, googleProvider, signInWithPopup, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, updateProfile } from "./js/firebase.js";
 
-    loginBtn.onclick = async () => {
-      try {
-        console.log("Attempting sign-in...");
-        console.log("auth:", auth);
-        console.log("provider:", googleProvider);
+    // Login script loaded
 
-        const result = await signInWithPopup(auth, googleProvider);
-        console.log("Login success:", result);
-        window.location.href = "index.html";
-      } catch (e) {
-        console.error("🔥 Full error object:", e);
-        alert("Login failed: " + e.code + "\n" + e.message);
+    try {
+      const loginForm = document.getElementById('loginForm');
+      const signupForm = document.getElementById('signupForm');
+      const showSignupBtn = document.getElementById('showSignup');
+      const showLoginBtn = document.getElementById('showLogin');
+      const loginError = document.getElementById('loginError');
+      const signupError = document.getElementById('signupError');
+
+      if (!showSignupBtn || !showLoginBtn) {
+        // Toggle buttons not found
       }
-    };
 
-    logoutBtn.onclick = async () => {
-      await signOut(auth);
-      alert("Logged out");
-    };
+      // Toggle Forms
+      showSignupBtn.addEventListener('click', () => {
+        // Switching to Signup form
+        loginForm.classList.add('hidden');
+        signupForm.classList.remove('hidden');
+        signupForm.classList.add('fade-in');
+        loginError.style.display = 'none';
+      });
 
-    onAuthStateChanged(auth, (user) => {
-      loginBtn.style.display = user ? "none" : "inline-block";
-      logoutBtn.style.display = user ? "inline-block" : "none";
-    });
-  });
-</script>
+      showLoginBtn.addEventListener('click', () => {
+        // Switching to Login form
+        signupForm.classList.add('hidden');
+        loginForm.classList.remove('hidden');
+        loginForm.classList.add('fade-in');
+        signupError.style.display = 'none';
+      });
 
+      // Show/Hide Password Logic
+      const togglePasswordVisibility = (checkboxId, ...inputIds) => {
+        const checkbox = document.getElementById(checkboxId);
+        const inputs = inputIds.map(id => document.getElementById(id));
+
+        if (checkbox && inputs.length > 0) {
+          checkbox.addEventListener('change', () => {
+            const type = checkbox.checked ? 'text' : 'password';
+            inputs.forEach(input => {
+              if (input) input.type = type;
+            });
+          });
+        }
+      };
+
+      togglePasswordVisibility('showLoginPassword', 'loginPassword');
+      togglePasswordVisibility('showSignupPassword', 'signupPassword', 'signupConfirmPassword');
+
+
+      // Google Login
+      const handleGoogleLogin = async () => {
+        // Starting Google Login...
+        try {
+          await signInWithPopup(auth, googleProvider);
+          // Google Login success
+          window.location.href = "index.html";
+        } catch (error) {
+          // Google Login Error
+          alert("Google Login Failed: " + error.message);
+        }
+      };
+
+      const googleLoginBtn = document.getElementById('googleLoginBtn');
+      const googleSignupBtn = document.getElementById('googleSignupBtn');
+
+      if (googleLoginBtn) googleLoginBtn.addEventListener('click', handleGoogleLogin);
+      if (googleSignupBtn) googleSignupBtn.addEventListener('click', handleGoogleLogin);
+
+      // Email Login
+      const emailLoginForm = document.getElementById('emailLoginForm');
+      if (emailLoginForm) {
+        emailLoginForm.addEventListener('submit', async (e) => {
+          e.preventDefault();
+          // Attempting Email Login...
+          const email = document.getElementById('loginEmail').value;
+          const password = document.getElementById('loginPassword').value;
+
+          try {
+            await signInWithEmailAndPassword(auth, email, password);
+            // Email Login success
+            window.location.href = "index.html";
+          } catch (error) {
+            // Email Login Error
+            loginError.textContent = "Error: " + error.message;
+            loginError.style.display = 'block';
+          }
+        });
+      }
+
+      // Email Signup
+      const emailSignupForm = document.getElementById('emailSignupForm');
+      if (emailSignupForm) {
+        emailSignupForm.addEventListener('submit', async (e) => {
+          e.preventDefault();
+          // Attempting Email Signup...
+          const username = document.getElementById('signupUsername').value;
+          const email = document.getElementById('signupEmail').value;
+          const password = document.getElementById('signupPassword').value;
+          const confirmPassword = document.getElementById('signupConfirmPassword').value;
+
+          if (password !== confirmPassword) {
+            signupError.textContent = "Passwords do not match!";
+            signupError.style.display = 'block';
+            return;
+          }
+
+          try {
+            const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+            // Email Signup success
+
+            if (username) {
+              await updateProfile(userCredential.user, {
+                displayName: username
+              });
+              // Profile updated
+            }
+
+            window.location.href = "index.html";
+          } catch (error) {
+            // Email Signup Error
+            signupError.textContent = "Error: " + error.message;
+            signupError.style.display = 'block';
+          }
+        });
+      }
+
+      // Auth State Listener
+      onAuthStateChanged(auth, (user) => {
+        if (user) {
+          // User already logged in
+          window.location.href = "index.html";
+        } else {
+          // No user logged in
+        }
+      });
+
+    } catch (err) {
+      // Critical error in login script
+      alert("Something went wrong initializing the login page. Check console for details.");
+    }
+  </script>
 </body>
+
 </html>

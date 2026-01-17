@@ -1,9 +1,9 @@
 import { GoogleGenerativeAI } from "https://cdn.jsdelivr.net/npm/@google/generative-ai/+esm";
 import { auth, db } from "./firebase.js";
-import { addDoc, collection, getDocs, deleteDoc } 
+import { addDoc, collection, getDocs, deleteDoc }
   from "https://www.gstatic.com/firebasejs/12.5.0/firebase-firestore.js";
 
-const API_KEY = "AIzaSyBAymnNctjlkQG4HaYj4sAv3H0VE9g6hgA";
+const API_KEY = "AIzaSyAcaoCV_IhsD61HrYWewecC0Mpeys0LrbE";//skillsboost3
 
 // small helper to query single element
 const $ = (sel) => document.querySelector(sel);
@@ -66,7 +66,7 @@ async function fetchRelatedTopics(mainTopic) {
 
     const genAI = new GoogleGenerativeAI(API_KEY);
     const preferredModel = "gemini-2.5-flash"; // or dynamically chosen from listModels()
-const model = genAI.getGenerativeModel({ model: preferredModel });
+    const model = genAI.getGenerativeModel({ model: preferredModel });
 
 
     // Stronger prompt to ensure relevant & capped topics
@@ -82,8 +82,8 @@ Return ONLY the subtopic names, one per line, no numbering, no explanations.`;
 
     // Flexible parsing: handle lists, commas, bullets
     let topics = raw
-      .split(/\r?\n|,|;|-/)             
-      .map(t => t.replace(/^[\s\d\.\)\-\*]+/, "").replace(/[`*_]{1,}/g, "").trim()) 
+      .split(/\r?\n|,|;|-/)
+      .map(t => t.replace(/^[\s\d\.\)\-\*]+/, "").replace(/[`*_]{1,}/g, "").trim())
       .filter(t => t.length > 0);
 
     // Retry if Gemini gave fewer than 5
@@ -103,7 +103,7 @@ Only names, one per line, no numbering, no extra text.`;
     // Always cap at 10
     return topics.slice(0, 10);
   } catch (err) {
-    console.error("fetchRelatedTopics error:", err);
+    // fetchRelatedTopics error
     return [];
   }
 }
@@ -121,11 +121,11 @@ async function listModels() {
   }
   const json = await res.json();
   // json.models is the array of available model metadata (inspect it in console)
-  console.log("Available models:", json.models);
+  // Available models logged
   return json.models || [];
 }
 
-async function pickModel(preferred = ["gemini-2.5-flash","gemini-flash-latest","gemini-2.5-flash-lite"]) {
+async function pickModel(preferred = ["gemini-2.5-flash", "gemini-flash-latest", "gemini-2.5-flash-lite"]) {
   try {
     const models = await listModels();
     // model entries vary, but each has a 'name' or 'model' field; be flexible:
@@ -137,7 +137,7 @@ async function pickModel(preferred = ["gemini-2.5-flash","gemini-flash-latest","
     // fallback: first model that supports generateContent (inspect model metadata)
     return names[0] || null;
   } catch (e) {
-    console.warn("Could not list models:", e);
+    // Could not list models
     return null;
   }
 }
@@ -214,7 +214,7 @@ async function generateRoadmap(topic) {
     // Call the generative model
     const genAI = new GoogleGenerativeAI(API_KEY);
     const preferredModel = "gemini-2.5-flash"; // or dynamically chosen from listModels()
-const model = genAI.getGenerativeModel({ model: preferredModel });
+    const model = genAI.getGenerativeModel({ model: preferredModel });
     const result = await model.generateContent(prompt);
     const response = await result.response.text();
 
@@ -232,9 +232,9 @@ const model = genAI.getGenerativeModel({ model: preferredModel });
 
     // Parse into steps (strip leading bullets/numbers and empty lines)
     const steps = responseText
-  .split(/\r?\n/)
-  .map(sanitizeText)
-  .filter(s => s !== "");
+      .split(/\r?\n/)
+      .map(sanitizeText)
+      .filter(s => s !== "");
 
 
     // Build DOM
@@ -277,7 +277,7 @@ const model = genAI.getGenerativeModel({ model: preferredModel });
     roadmapContainer.appendChild(saveButton);
 
   } catch (err) {
-    console.error("generateRoadmap error:", err);
+    // generateRoadmap error
     roadmapContainer.innerHTML = `<div class="error-message">Error generating roadmap. Open browser console for details.</div>`;
   }
 }
@@ -309,7 +309,7 @@ async function saveRoadmap(topic, steps) {
       }
     }
   } catch (e) {
-    console.warn("Cloud save roadmap failed:", e);
+    // Cloud save roadmap failed
   }
 
   const notification = document.createElement("div");
@@ -320,10 +320,10 @@ async function saveRoadmap(topic, steps) {
 }
 
 function showNotification(message, type = 'info') {
-    // Create notification element
-    const notification = document.createElement('div');
-    notification.className = `notification ${type}`;
-    notification.style.cssText = `
+  // Create notification element
+  const notification = document.createElement('div');
+  notification.className = `notification ${type}`;
+  notification.style.cssText = `
         position: fixed;
         top: 20px;
         right: 20px;
@@ -337,25 +337,25 @@ function showNotification(message, type = 'info') {
         max-width: 300px;
         box-shadow: 0 4px 12px rgba(0,0,0,0.15);
     `;
-    
-    notification.innerHTML = `
+
+  notification.innerHTML = `
         <div style="display: flex; align-items: center; gap: 10px;">
             <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-circle' : 'info-circle'}"></i>
             <span>${message}</span>
         </div>
     `;
-    
-    document.body.appendChild(notification);
-    
-    // Auto remove after 3 seconds
+
+  document.body.appendChild(notification);
+
+  // Auto remove after 3 seconds
+  setTimeout(() => {
+    notification.style.animation = 'slideOut 0.3s ease';
     setTimeout(() => {
-        notification.style.animation = 'slideOut 0.3s ease';
-        setTimeout(() => {
-            if (notification.parentNode) {
-                notification.parentNode.removeChild(notification);
-            }
-        }, 300);
-    }, 3000);
+      if (notification.parentNode) {
+        notification.parentNode.removeChild(notification);
+      }
+    }, 300);
+  }, 3000);
 }
 
 function renderSavedRoadmap(topic, steps) {

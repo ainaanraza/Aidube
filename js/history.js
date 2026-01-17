@@ -1,17 +1,17 @@
 import { auth, db } from "./firebase.js";
-import { 
-    setDoc, 
-    doc, 
-    deleteDoc, 
-    collection, 
-    getDocs, 
-    query 
+import {
+    setDoc,
+    doc,
+    deleteDoc,
+    collection,
+    getDocs,
+    query
 } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-firestore.js";
 
-window.removeLectureHistory = async function(index) {
+window.removeLectureHistory = async function (index) {
     const lectureHistory = JSON.parse(localStorage.getItem("lectureHistory")) || [];
     const removedItem = lectureHistory[index];
-    
+
     // Remove from local storage
     lectureHistory.splice(index, 1);
     localStorage.setItem("lectureHistory", JSON.stringify(lectureHistory));
@@ -22,46 +22,46 @@ window.removeLectureHistory = async function(index) {
     if (user && removedItem?.id) {
         try {
             await deleteDoc(doc(db, "users", user.uid, "history", removedItem.id));
-            console.log(` Removed "${removedItem.title}" from Firestore history`);
+            // Removed from Firestore history
         } catch (error) {
-            console.error("Error removing from Firestore:", error);
+            // Error removing from Firestore
             showNotification("Error removing from cloud history", "error");
         }
     }
 };
 
 // Clears all lecture history (localStorage and Firestore)
-window.clearAllLectureHistory = async function() {
-  // Remove from localStorage
-  localStorage.removeItem("lectureHistory");
-  updateLectureHistory();
+window.clearAllLectureHistory = async function () {
+    // Remove from localStorage
+    localStorage.removeItem("lectureHistory");
+    updateLectureHistory();
 
-  // Also clear from Firestore (all 'history' docs)
-  const user = auth.currentUser;
-  if (user) {
-    try {
-      const snap = await getDocs(collection(db, "users", user.uid, "history"));
-      for (const docSnap of snap.docs) {
-        await deleteDoc(docSnap.ref);
-      }
-    } catch (err) {
-      console.error("Error clearing history in Firestore:", err);
+    // Also clear from Firestore (all 'history' docs)
+    const user = auth.currentUser;
+    if (user) {
+        try {
+            const snap = await getDocs(collection(db, "users", user.uid, "history"));
+            for (const docSnap of snap.docs) {
+                await deleteDoc(docSnap.ref);
+            }
+        } catch (err) {
+            // Error clearing history in Firestore
+        }
     }
-  }
 };
 
 
-window.redirectToPlaylistPage = function(playlistId, title, thumbnail) {
+window.redirectToPlaylistPage = function (playlistId, title, thumbnail) {
     saveToLectureHistory(title, playlistId, thumbnail);
     window.location.href = `playlist.html?playlistId=${playlistId}`;
 };
 
 
-window.savePlaylist = async function(title, id) {
+window.savePlaylist = async function (title, id) {
     try {
         const decodedTitle = decodeURIComponent(title);
         const playlists = JSON.parse(localStorage.getItem("savedPlaylists")) || [];
-        
+
         if (!playlists.some(p => p.id === id)) {
             playlists.push({ title: decodedTitle, id, savedAt: Date.now() });
             localStorage.setItem("savedPlaylists", JSON.stringify(playlists));
@@ -73,34 +73,34 @@ window.savePlaylist = async function(title, id) {
         const user = auth.currentUser;
         if (user) {
             await setDoc(doc(db, "users", user.uid, "playlists", id), {
-                title: decodedTitle, 
-                id, 
+                title: decodedTitle,
+                id,
                 savedAt: Date.now(),
             }, { merge: true });
         }
     } catch (error) {
-        console.error("Error saving playlist:", error);
+        // Error saving playlist
         showNotification("Error saving playlist", "error");
     }
 };
 
 // Helper functions
 function saveToLectureHistory(title, id, thumbnailUrl = null) {
-  // Only save playlist-type IDs (not individual videos)
-  if (!id || id.length <= 11 || (!id.startsWith("PL") && !id.startsWith("UU") && !id.startsWith("FL"))) {
-    console.warn("Skipped saving non-playlist item to history:", id);
-    return;
-  }
+    // Only save playlist-type IDs (not individual videos)
+    if (!id || id.length <= 11 || (!id.startsWith("PL") && !id.startsWith("UU") && !id.startsWith("FL"))) {
+        // Skipped saving non-playlist item to history
+        return;
+    }
 
-  const history = JSON.parse(localStorage.getItem("lectureHistory")) || [];
-  const thumbnail = thumbnailUrl || 'https://via.placeholder.com/120x70?text=Playlist';
+    const history = JSON.parse(localStorage.getItem("lectureHistory")) || [];
+    const thumbnail = thumbnailUrl || 'https://via.placeholder.com/120x70?text=Playlist';
 
-  const existing = history.find(h => h.id === id);
-  if (!existing) {
-    history.unshift({ title, id, thumbnail, playedAt: Date.now() });
-    localStorage.setItem("lectureHistory", JSON.stringify(history));
-    updateLectureHistory();
-  }
+    const existing = history.find(h => h.id === id);
+    if (!existing) {
+        history.unshift({ title, id, thumbnail, playedAt: Date.now() });
+        localStorage.setItem("lectureHistory", JSON.stringify(history));
+        updateLectureHistory();
+    }
 }
 
 
@@ -159,16 +159,16 @@ function showNotification(message, type = 'info') {
         max-width: 300px;
         box-shadow: 0 4px 12px rgba(0,0,0,0.15);
     `;
-    
+
     notification.innerHTML = `
         <div style="display: flex; align-items: center; gap: 10px;">
             <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-circle' : 'info-circle'}"></i>
             <span>${message}</span>
         </div>
     `;
-    
+
     document.body.appendChild(notification);
-    
+
     setTimeout(() => {
         notification.style.animation = 'slideOut 0.3s ease';
         setTimeout(() => {
@@ -182,7 +182,7 @@ function showNotification(message, type = 'info') {
 // Initialize when DOM is loaded
 document.addEventListener("DOMContentLoaded", () => {
     updateLectureHistory();
-    
+
     const clearButton = document.querySelector(".clear-button");
     if (clearButton) {
         clearButton.addEventListener("click", clearAllLectureHistory);
