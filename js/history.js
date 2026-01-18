@@ -7,7 +7,7 @@ import {
     getDocs,
     query
 } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-firestore.js";
-import { showNotification } from "./utils.js";
+import { showNotification, sanitizeHTML } from "./utils.js";
 
 window.removeLectureHistory = async function (index) {
     const lectureHistory = JSON.parse(localStorage.getItem("lectureHistory")) || [];
@@ -125,18 +125,18 @@ function updateLectureHistory() {
         return `
         <div class="history-item" style="background: var(--surface); backdrop-filter: blur(8px); border: 1px solid var(--glass-border); border-radius: var(--radius-lg); padding: 1.25rem; margin-bottom: 1.5rem; display: flex; gap: 1.5rem; transition: var(--transition); box-shadow: var(--shadow);">
             <div class="history-thumb-wrapper" style="width: 160px; aspect-ratio: 16/9; border-radius: var(--radius); overflow: hidden; flex-shrink: 0; box-shadow: var(--shadow-sm);">
-                <img src="${item.thumbnail}" 
-                     alt="${item.title}" 
+                <img src="${sanitizeHTML(item.thumbnail)}" 
+                     alt="${sanitizeHTML(item.title)}" 
                      style="width: 100%; height: 100%; object-fit: cover;"
                      onerror="this.src='https://via.placeholder.com/160x90?text=No+Image'">
             </div>
             <div class="history-info" style="flex: 1; display: flex; flex-direction: column; justify-content: center;">
-                <p class="history-title" style="font-weight: 700; color: var(--text); font-size: 1.1rem; margin-bottom: 0.75rem;">${item.title}</p>
+                <p class="history-title" style="font-weight: 700; color: var(--text); font-size: 1.1rem; margin-bottom: 0.75rem;">${sanitizeHTML(item.title)}</p>
                 <div class="history-actions" style="display: flex; gap: 0.75rem;">
-                    <button class="btn-primary" style="padding: 0.5rem 1rem;" onclick="redirectToPlaylistPage('${item.id}', '${safeTitle}')">
+                    <button class="btn-primary" style="padding: 0.5rem 1rem;" onclick="redirectToPlaylistPage('${sanitizeHTML(item.id)}', '${safeTitle}')">
                         <i class="fas fa-play"></i> Resume
                     </button>
-                    <button class="btn-secondary" style="padding: 0.5rem 1rem;" onclick="savePlaylist('${safeTitle}', '${item.id}')">
+                    <button class="btn-secondary" style="padding: 0.5rem 1rem;" onclick="savePlaylist('${safeTitle}', '${sanitizeHTML(item.id)}')">
                         <i class="fas fa-bookmark"></i> Save
                     </button>
                     <button class="btn-ghost" style="padding: 0.5rem 1rem; color: #ef4444;" onclick="removeLectureHistory(${index})">

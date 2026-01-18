@@ -83,7 +83,7 @@ export function showNotification(message, type = 'info') {
 
     notification.innerHTML = `
         <i class="fas fa-${iconClass}"></i>
-        <span>${message}</span>
+        <span>${sanitizeHTML(message)}</span>
     `;
 
     document.body.appendChild(notification);
@@ -146,4 +146,14 @@ export async function incrementQuota(type) {
     } catch (e) {
         console.error("Error incrementing quota:", e);
     }
+}
+
+export function sanitizeHTML(str) {
+    if (!str) return '';
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
 }

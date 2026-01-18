@@ -1,6 +1,6 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { auth } from "./firebase.js";
-import { getGeminiApiKey, rotateGeminiKey, retryOperation, showNotification, checkQuota, incrementQuota } from "./utils.js";
+import { getGeminiApiKey, rotateGeminiKey, retryOperation, showNotification, checkQuota, incrementQuota, sanitizeHTML } from "./utils.js";
 
 const urlParams = new URLSearchParams(window.location.search);
 const videoId = urlParams.get('videoId');
@@ -93,14 +93,14 @@ function renderTest(questions) {
     html += `
       <div class="question-block" style="margin-bottom: 2rem;">
         <h3 style="color: #1e3a8a; margin-bottom: 1rem;">Question ${index + 1}</h3>
-        <p style="font-size: 1.1rem; margin-bottom: 1rem;">${q.question}</p>
+        <p style="font-size: 1.1rem; margin-bottom: 1rem;">${sanitizeHTML(q.question)}</p>
         <div style="display: flex; flex-direction: column; gap: 0.8rem;">
     `;
 
     q.options.forEach((opt, optIndex) => {
       html += `
         <label style="padding: 1rem; border: 1px solid #e5e7eb; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 0.5rem;">
-          <input type="radio" name="q${index}" value="${optIndex}"> ${opt}
+          <input type="radio" name="q${index}" value="${optIndex}"> ${sanitizeHTML(opt)}
         </label>
       `;
     });

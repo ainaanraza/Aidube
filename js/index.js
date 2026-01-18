@@ -2,7 +2,7 @@ import { auth, db } from "./firebase.js";
 import { doc, setDoc, getDoc, getDocs, collection, deleteDoc, query, orderBy, addDoc, onSnapshot }
   from "https://www.gstatic.com/firebasejs/12.5.0/firebase-firestore.js";
 import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-auth.js";
-import { getYouTubeApiKey, rotateYouTubeKey, isValidPlaylistId, retryOperation, showNotification } from "./utils.js";
+import { getYouTubeApiKey, rotateYouTubeKey, isValidPlaylistId, retryOperation, showNotification, sanitizeHTML } from "./utils.js";
 
 const lectureHistory = JSON.parse(localStorage.getItem("lectureHistory")) || [];
 const savedPlaylists = JSON.parse(localStorage.getItem("savedPlaylists")) || [];
@@ -87,7 +87,7 @@ function renderLastPlayed() {
         </div>
         <div class="last-played-info">
           <p style="text-transform: uppercase; font-size: 0.7rem; font-weight: 800; letter-spacing: 0.1em; opacity: 0.8; margin-bottom: 0.25rem;">Continue Journey</p>
-          <h4>${lastPlayedVideo.title}</h4>
+          <h4>${sanitizeHTML(lastPlayedVideo.title)}</h4>
           <button class="btn-secondary" style="background: white; color: var(--primary); border: none;" onclick="resumeLastPlayed()">
             <i class="fas fa-play"></i> Resume Lesson
           </button>
@@ -118,20 +118,20 @@ function updateLectureHistory() {
     const safeTitle = item.title.replace(/'/g, "\\'").replace(/"/g, '\\"');
     return `
     <div class="history-item">
-      <img src="${item.thumbnail}" 
-           alt="${item.title}" 
+      <img src="${sanitizeHTML(item.thumbnail)}" 
+           alt="${sanitizeHTML(item.title)}" 
            class="history-thumb"
            onerror="this.src='https://via.placeholder.com/120x70?text=No+Image'">
       <div class="history-info">
-        <p class="history-title">${item.title}</p>
+        <p class="history-title">${sanitizeHTML(item.title)}</p>
         <div class="history-actions">
-          <button onclick="redirectToPlaylistPage('${item.id}', '${safeTitle}')">
+          <button onclick="redirectToPlaylistPage('${sanitizeHTML(item.id)}', '${safeTitle}')">
             <i class="fas fa-play"></i> View
           </button>
           <button onclick="removeLectureHistory(${index})">
             <i class="fas fa-trash"></i> Delete
           </button>
-          <button onclick="savePlaylist('${safeTitle}', '${item.id}')">
+          <button onclick="savePlaylist('${safeTitle}', '${sanitizeHTML(item.id)}')">
             <i class="fas fa-bookmark"></i> Save
           </button>
         </div>
@@ -163,9 +163,9 @@ function renderPlaylistItems(playlists) {
   return playlists.length
     ? playlists.map((p, i) => `
       <div class="saved-item">
-        <div class="saved-item-title">${p.title}</div>
+        <div class="saved-item-title">${sanitizeHTML(p.title)}</div>
         <div class="saved-item-info">
-          <button class="btn-ghost" style="padding: 0.25rem 0.5rem; font-size: 0.75rem;" onclick="redirectToPlaylistPage('${p.id}','${p.title}')">
+          <button class="btn-ghost" style="padding: 0.25rem 0.5rem; font-size: 0.75rem;" onclick="redirectToPlaylistPage('${sanitizeHTML(p.id)}','${sanitizeHTML(p.title)}')">
             <i class="fas fa-external-link-alt"></i> View
           </button>
           <button class="btn-ghost" style="padding: 0.25rem 0.5rem; font-size: 0.75rem; color: #ef4444;" onclick="removeSavedPlaylist(${i})">
@@ -234,21 +234,21 @@ function renderPlaylists(playlists) {
     playlistElement.className = "playlist-card";
     playlistElement.innerHTML = `
       <div class="thumbnail-container">
-        <img src="${thumbnail}" alt="${playlistTitle}">
+        <img src="${sanitizeHTML(thumbnail)}" alt="${sanitizeHTML(playlistTitle)}">
         <div class="video-count-badge">
           <i class="fas fa-list"></i> Playlist
         </div>
       </div>
       <div class="card-content">
-        <div class="card-title">${playlistTitle}</div>
+        <div class="card-title">${sanitizeHTML(playlistTitle)}</div>
         <div class="card-meta">
-          <span><i class="fas fa-user-circle"></i> ${channelTitle}</span>
+          <span><i class="fas fa-user-circle"></i> ${sanitizeHTML(channelTitle)}</span>
         </div>
         <div style="display: flex; gap: 0.5rem; margin-top: 1rem;">
-          <button class="btn-primary" style="flex: 1; justify-content: center;" onclick="redirectToPlaylistPage('${playlistId}', '${playlistTitle}', '${thumbnail}')">
+          <button class="btn-primary" style="flex: 1; justify-content: center;" onclick="redirectToPlaylistPage('${sanitizeHTML(playlistId)}', '${sanitizeHTML(playlistTitle)}', '${sanitizeHTML(thumbnail)}')">
             Play
           </button>
-          <button class="btn-secondary" style="padding: 0.5rem;" onclick="savePlaylist('${playlistTitle}', '${playlistId}')">
+          <button class="btn-secondary" style="padding: 0.5rem;" onclick="savePlaylist('${sanitizeHTML(playlistTitle)}', '${sanitizeHTML(playlistId)}')">
             <i class="fas fa-bookmark"></i>
           </button>
         </div>
@@ -409,9 +409,9 @@ function renderRoadmapItems(roadmaps) {
   return roadmaps.length
     ? roadmaps.map((r, i) => `
       <div class="saved-item">
-        <div class="saved-item-title">${r.topic}</div>
+        <div class="saved-item-title">${sanitizeHTML(r.topic)}</div>
         <div class="saved-item-info">
-          <button class="btn-ghost" style="padding: 0.25rem 0.5rem; font-size: 0.75rem;" onclick="viewSavedRoadmap('${r.topic}')">
+          <button class="btn-ghost" style="padding: 0.25rem 0.5rem; font-size: 0.75rem;" onclick="viewSavedRoadmap('${sanitizeHTML(r.topic)}')">
             <i class="fas fa-map-marked-alt"></i> Journey
           </button>
           <button class="btn-ghost" style="padding: 0.25rem 0.5rem; font-size: 0.75rem; color: #ef4444;" onclick="deleteSavedRoadmap(${i})">
@@ -574,8 +574,8 @@ onAuthStateChanged(auth, (user) => {
             <img src="${user.photoURL || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(user.displayName || 'User') + '&background=random'}" style="width:100%; height:100%; border-radius:50%">
           </div>
           <div class="user-details">
-            <p>${user.displayName || "Learner"}</p>
-            <span>${user.email}</span>
+            <p>${sanitizeHTML(user.displayName) || "Learner"}</p>
+            <span>${sanitizeHTML(user.email)}</span>
           </div>
         `;
       }
@@ -587,8 +587,8 @@ onAuthStateChanged(auth, (user) => {
            <div class="user-avatar">
              <img src="${user.photoURL || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(user.displayName || 'User') + '&background=random'}" style="width:100%; height:100%; border-radius:50%">
            </div>
-           <h3>${user.displayName || "Learner"}</h3>
-           <p>${user.email}</p>
+           <h3>${sanitizeHTML(user.displayName) || "Learner"}</h3>
+           <p>${sanitizeHTML(user.email)}</p>
          `;
         const dLogout = document.getElementById("drawerLogoutBtn");
         if (dLogout) dLogout.style.display = "flex";

@@ -2,7 +2,7 @@ import { GoogleGenerativeAI } from "https://cdn.jsdelivr.net/npm/@google/generat
 import { auth, db } from "./firebase.js";
 import { addDoc, collection, getDocs, deleteDoc }
   from "https://www.gstatic.com/firebasejs/12.5.0/firebase-firestore.js";
-import { showNotification, checkQuota, incrementQuota } from "./utils.js";
+import { showNotification, checkQuota, incrementQuota, sanitizeHTML } from "./utils.js";
 
 const API_KEY = "AIzaSyAcaoCV_IhsD61HrYWewecC0Mpeys0LrbE";//skillsboost3
 
@@ -185,8 +185,8 @@ async function populateTopics(mainTopic) {
     label.htmlFor = safeId;
 
     label.innerHTML = `
-      <input type="checkbox" value="${topic}" id="${safeId}" style="accent-color: var(--primary);">
-      <span>${topic}</span>
+      <input type="checkbox" value="${sanitizeHTML(topic)}" id="${sanitizeHTML(safeId)}" style="accent-color: var(--primary);">
+      <span>${sanitizeHTML(topic)}</span>
     `;
 
     container.appendChild(label);
@@ -256,8 +256,8 @@ async function generateRoadmap(topic) {
       item.style.animationDelay = `${index * 0.1} s`;
       item.innerHTML = `
       <span class="roadmap-step">Milestone ${index + 1}</span>
-        <h3 class="roadmap-title">${mainTopic}</h3>
-        <p class="roadmap-desc">${step}</p>
+        <h3 class="roadmap-title">${sanitizeHTML(mainTopic)}</h3>
+        <p class="roadmap-desc">${sanitizeHTML(step)}</p>
         <button class="btn-primary" onclick="window.location.href='index.html?search=${encodeURIComponent(mainTopic)}'">
           <i class="fas fa-play-circle"></i> Start Learning
         </button>
@@ -334,8 +334,8 @@ function renderSavedRoadmap(topic, steps) {
     item.style.animationDelay = `${index * 0.1} s`;
     item.innerHTML = `
       <span class="roadmap-step">Step ${index + 1}</span>
-      <h3 class="roadmap-title">${mainTopic}</h3>
-      <p class="roadmap-desc">${step}</p>
+      <h3 class="roadmap-title">${sanitizeHTML(mainTopic)}</h3>
+      <p class="roadmap-desc">${sanitizeHTML(step)}</p>
       <button class="btn-primary" onclick="window.location.href='index.html?search=${encodeURIComponent(mainTopic)}'">
         <i class="fas fa-play-circle"></i> Continue Skill
       </button>

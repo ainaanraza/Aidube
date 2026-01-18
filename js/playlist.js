@@ -1,6 +1,6 @@
 import { auth, db } from "./firebase.js";
 import { setDoc, doc, getDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-firestore.js";
-import { getYouTubeApiKey, rotateYouTubeKey, isValidPlaylistId, retryOperation, getGeminiApiKey, rotateGeminiKey, showNotification, checkQuota, incrementQuota } from "./utils.js";
+import { getYouTubeApiKey, rotateYouTubeKey, isValidPlaylistId, retryOperation, getGeminiApiKey, rotateGeminiKey, showNotification, checkQuota, incrementQuota, sanitizeHTML } from "./utils.js";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
 
@@ -78,10 +78,10 @@ function displayVideos(videos) {
     videoItem.id = `video-${videoId}`;
     videoItem.innerHTML = `
       <div class="video-thumbnail">
-        <img src="${thumbnailUrl}" alt="${videoTitle}" onerror="this.src='https://via.placeholder.com/120x90?text=No+Thumbnail'">
+        <img src="${sanitizeHTML(thumbnailUrl)}" alt="${sanitizeHTML(videoTitle)}" onerror="this.src='https://via.placeholder.com/120x90?text=No+Thumbnail'">
       </div>
       <div class="video-info">
-        <div class="video-title">${videoTitle}</div>
+        <div class="video-title">${sanitizeHTML(videoTitle)}</div>
         <div style="font-size: 0.7rem; color: var(--text-muted); margin-top: 0.25rem;">
           <i class="fas fa-play-circle"></i> Lesson ${index + 1}
         </div>
@@ -186,7 +186,7 @@ window.playVideo = playVideo;
 async function fetchTranscript(videoId) {
   try {
     console.log(`Fetching transcript from local backend for ${videoId}...`);
-    const response = await fetch(`http://localhost:5000/transcript/${videoId}`);
+    const response = await fetch(`/transcript/${videoId}`);
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
       throw new Error(errorData.error || `Server returned ${response.status}`);
@@ -664,7 +664,7 @@ async function savePlaylistToDashboard(btnElement) {
     // The existing code has a style for .error-message but maybe not a generic notification.
     // I'll create a simple one or reuse if I see one reference. 
     // I saw showNotification in index.js but not exported. I'll make a local one.
-    showNotification(`Playlist "${title}" saved!`, "success");
+    showNotification(`Playlist "${sanitizeHTML(title)}" saved!`, "success");
 
   } catch (error) {
     // Error saving playlist

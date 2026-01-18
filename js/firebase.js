@@ -17,7 +17,7 @@ const app = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 export const googleProvider = new GoogleAuthProvider();
 export { createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, signInWithPopup, updateProfile };
-googleProvider.addScope("https://www.googleapis.com/auth/youtube.readonly");
+// googleProvider.addScope("https://www.googleapis.com/auth/youtube.readonly"); // Removed to prevent "Sensitive Info" warning.
 
 export const db = getFirestore(app);
 
