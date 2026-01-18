@@ -1,3 +1,6 @@
+import { auth, db } from "./firebase.js";
+import { doc, getDoc, setDoc, updateDoc, increment } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-firestore.js";
+
 // Configuration
 const YOUTUBE_API_KEYS = [
     "AIzaSyB8qZ_7Z7miBrUeo2cRDE6aPwyhe5TVCo8",
@@ -99,4 +102,48 @@ export function showNotification(message, type = 'info') {
             }
         }, 300); // Wait for transition
     }, 3000);
+}
+
+// Quota Management
+export async function checkQuota(type) {
+    const user = auth.currentUser;
+    if (!user) return false;
+
+    const date = new Date().toISOString().split('T')[0];
+    const docRef = doc(db, "users", user.uid, "daily_quotas", date);
+
+    try {
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+            const data = docSnap.data();
+            const count = data[type] || 0;
+            if (count >= 3) {
+                showNotification(`Quota hit: Daily limit of 3 ${type} generations reached.`, "warning");
+                return false;
+            }
+        }
+        return true;
+    } catch (e) {
+        console.error("Error checking quota:", e);
+        // Fail open if network error, or fail closed? 
+        // Let's assume fail open strictly for check, but usually it's better to warn.
+        return true;
+    }
+}
+
+export async function incrementQuota(type) {
+    const user = auth.currentUser;
+    if (!user) return;
+
+    const date = new Date().toISOString().split('T')[0];
+    const docRef = doc(db, "users", user.uid, "daily_quotas", date);
+
+    try {
+        await setDoc(docRef, {
+            [type]: increment(1),
+            lastUpdated: Date.now()
+        }, { merge: true });
+    } catch (e) {
+        console.error("Error incrementing quota:", e);
+    }
 }

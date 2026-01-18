@@ -8,6 +8,10 @@
   <link rel="stylesheet" href="css/index.css">
   <link rel="stylesheet" href="css/toast.css">
   <title>Aidube | Your Modern Classroom</title>
+  <script type="module">
+    import { inject } from 'https://cdn.jsdelivr.net/npm/@vercel/analytics/+esm';
+    inject();
+  </script>
 </head>
 
 <body>
@@ -120,6 +124,11 @@
       </div>
     </main>
   </div>
+
+  <footer style="text-align: center; padding: 2rem 0; color: var(--text-muted); font-size: 0.9rem;">
+    <p>&copy; 2026 Aidube. All rights reserved. | <a href="privacy_policy.html"
+        style="color: var(--primary); text-decoration: none;">Privacy Policy</a></p>
+  </footer>
 
   <script type="module" src="js/index.js"></script>
 </body>

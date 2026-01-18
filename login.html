@@ -5,6 +5,10 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Login • Aidube</title>
+  <script type="module">
+    import { inject } from 'https://cdn.jsdelivr.net/npm/@vercel/analytics/+esm';
+    inject();
+  </script>
   <link rel="stylesheet" href="css/login.css" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
   <link rel="stylesheet" href="css/toast.css">
@@ -27,7 +31,7 @@
         <div id="loginError" class="error-message"></div>
 
         <button id="googleLoginBtn" class="btn btn-google">
-          <i class="fab fa-youtube" style="color: #ff0000;"></i> Continue with Google
+          <i class="fab fa-google" style="color: #4285F4;"></i> Continue with Google
         </button>
 
         <div class="divider">or</div>
@@ -102,6 +106,12 @@
       </div>
     </div>
   </div>
+
+  <footer
+    style="text-align: center; padding: 1rem 0; color: #fff; opacity: 0.8; position: absolute; bottom: 10px; width: 100%;">
+    <p style="font-size: 0.8rem;">&copy; 2026 Aidube | <a href="privacy_policy.html"
+        style="color: #fff; text-decoration: underline;">Privacy Policy</a></p>
+  </footer>
 
   <script type="module">
     // Global error handler

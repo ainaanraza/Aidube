@@ -1,6 +1,6 @@
 import { auth, db } from "./firebase.js";
 import { setDoc, doc, getDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-firestore.js";
-import { getYouTubeApiKey, rotateYouTubeKey, isValidPlaylistId, retryOperation, getGeminiApiKey, rotateGeminiKey, showNotification } from "./utils.js";
+import { getYouTubeApiKey, rotateYouTubeKey, isValidPlaylistId, retryOperation, getGeminiApiKey, rotateGeminiKey, showNotification, checkQuota, incrementQuota } from "./utils.js";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
 
@@ -433,6 +433,9 @@ async function handleGenerateDocument(type, btnElement) {
     return;
   }
 
+  // Check Quota
+  if (!await checkQuota('notes')) return;
+
   if (btnElement) {
     btnElement.disabled = true;
     btnElement.dataset.originalText = btnElement.innerHTML;
@@ -510,6 +513,9 @@ async function handleGenerateDocument(type, btnElement) {
 
     // Create PDF
     createStyledPdf(`${title}`, result, `${type}_${videoId}`);
+
+    // Increment quota on success
+    await incrementQuota('notes');
   } catch (e) {
     showNotification('Document generation failed: ' + (e.message || e), "error");
   } finally {
@@ -536,6 +542,7 @@ document.addEventListener('DOMContentLoaded', () => {
         showNotification("You must be logged in to take a test.", "warning");
         return;
       }
+      if (!await checkQuota('test')) return;
       try {
         const iframe = videoPlayer.querySelector('iframe');
         if (!iframe) return showNotification('No video loaded', "error");

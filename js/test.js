@@ -1,6 +1,6 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { auth } from "./firebase.js";
-import { getGeminiApiKey, rotateGeminiKey, retryOperation, showNotification } from "./utils.js";
+import { getGeminiApiKey, rotateGeminiKey, retryOperation, showNotification, checkQuota, incrementQuota } from "./utils.js";
 
 const urlParams = new URLSearchParams(window.location.search);
 const videoId = urlParams.get('videoId');
@@ -11,6 +11,8 @@ async function generateTest() {
     showNotification("You must be logged in to generate a test.", "warning");
     return;
   }
+
+  if (!await checkQuota('test')) return;
 
   const testContent = document.getElementById('testContent');
 
@@ -68,6 +70,7 @@ async function generateTest() {
 
     const questions = JSON.parse(text);
     renderTest(questions);
+    await incrementQuota('test');
 
   } catch (error) {
     // Error generating test

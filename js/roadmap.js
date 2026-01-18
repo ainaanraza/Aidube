@@ -2,7 +2,7 @@ import { GoogleGenerativeAI } from "https://cdn.jsdelivr.net/npm/@google/generat
 import { auth, db } from "./firebase.js";
 import { addDoc, collection, getDocs, deleteDoc }
   from "https://www.gstatic.com/firebasejs/12.5.0/firebase-firestore.js";
-import { showNotification } from "./utils.js";
+import { showNotification, checkQuota, incrementQuota } from "./utils.js";
 
 const API_KEY = "AIzaSyAcaoCV_IhsD61HrYWewecC0Mpeys0LrbE";//skillsboost3
 
@@ -205,6 +205,12 @@ async function generateRoadmap(topic) {
         <p style="color: var(--text-muted); margin-top: 0.5rem;">Analyzing millions of educational data points...</p>
       </div>`;
 
+    // Check Quota first
+    if (!await checkQuota('roadmap')) {
+      roadmapContainer.innerHTML = ""; // Clear loading
+      return;
+    }
+
     const levelEl = document.getElementById("levelSelect");
     const knowledgeEl = document.getElementById("knowledgeSelect");
     const level = levelEl ? levelEl.value : "beginner";
@@ -230,7 +236,7 @@ async function generateRoadmap(topic) {
     roadmapContainer.innerHTML = "";
 
     if (!responseText || responseText.trim() === "") {
-      roadmapContainer.innerHTML = `<div class="error-message">Unable to generate roadmap. Please check your API key and network.</div>`;
+      roadmapContainer.innerHTML = `< div class="error-message" > Unable to generate roadmap.Please check your API key and network.</div > `;
       return;
     }
 
@@ -247,15 +253,15 @@ async function generateRoadmap(topic) {
 
       const item = document.createElement("div");
       item.className = "roadmap-item animate__animated animate__fadeInUp";
-      item.style.animationDelay = `${index * 0.1}s`;
+      item.style.animationDelay = `${index * 0.1} s`;
       item.innerHTML = `
-        <span class="roadmap-step">Milestone ${index + 1}</span>
+      <span class="roadmap-step">Milestone ${index + 1}</span>
         <h3 class="roadmap-title">${mainTopic}</h3>
         <p class="roadmap-desc">${step}</p>
         <button class="btn-primary" onclick="window.location.href='index.html?search=${encodeURIComponent(mainTopic)}'">
           <i class="fas fa-play-circle"></i> Start Learning
         </button>
-      `;
+    `;
       container.appendChild(item);
     });
 
@@ -267,12 +273,15 @@ async function generateRoadmap(topic) {
     saveButton.style.width = "100%";
     saveButton.style.justifyContent = "center";
     saveButton.style.padding = "1rem";
-    saveButton.innerHTML = `<i class="fas fa-bookmark"></i> Save This Entire Journey`;
+    saveButton.innerHTML = `< i class="fas fa-bookmark" ></i > Save This Entire Journey`;
     saveButton.onclick = () => saveRoadmap(topic, steps);
     roadmapContainer.appendChild(saveButton);
 
+    // Increment usage
+    await incrementQuota('roadmap');
+
   } catch (err) {
-    roadmapContainer.innerHTML = `<div class="error-message">Error generating roadmap. Open browser console for details.</div>`;
+    roadmapContainer.innerHTML = `< div class="error-message" > Error generating roadmap.Open browser console for details.</div > `;
   }
 }
 
@@ -322,7 +331,7 @@ function renderSavedRoadmap(topic, steps) {
     const mainTopic = sanitizeText(step.split(":")[0]).replace(/^\d+\.\s*/, "").replace(/^-\s*/, "");
     const item = document.createElement("div");
     item.className = "roadmap-item animate__animated animate__fadeInUp";
-    item.style.animationDelay = `${index * 0.1}s`;
+    item.style.animationDelay = `${index * 0.1} s`;
     item.innerHTML = `
       <span class="roadmap-step">Step ${index + 1}</span>
       <h3 class="roadmap-title">${mainTopic}</h3>
