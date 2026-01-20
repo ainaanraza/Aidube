@@ -12,25 +12,18 @@
   <link rel="stylesheet" href="css/login.css" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
   <link rel="stylesheet" href="css/toast.css">
-  <script type="text/javascript">
-    var loginWidgetId;
-    var signupWidgetId;
-    var onloadCallback = function () {
-      // Render the recaptcha widget for login
-      if (document.getElementById('recaptcha-login')) {
-        loginWidgetId = grecaptcha.render('recaptcha-login', {
-          'sitekey': '6LcL004sAAAAALsn74XuPBG2bSC19YId79_PT6rB'
-        });
-      }
-      // Render the recaptcha widget for signup
-      if (document.getElementById('recaptcha-signup')) {
-        signupWidgetId = grecaptcha.render('recaptcha-signup', {
-          'sitekey': '6LcL004sAAAAALsn74XuPBG2bSC19YId79_PT6rB'
-        });
-      }
+  <script>
+    // Global callbacks for reCAPTCHA
+    window.loginToken = null;
+    window.signupToken = null;
+    window.onLoginCaptcha = function (token) {
+      window.loginToken = token;
+    };
+    window.onSignupCaptcha = function (token) {
+      window.signupToken = token;
     };
   </script>
-  <script src="https://www.google.com/recaptcha/api.js?onload=onloadCallback&render=explicit" async defer></script>
+  <script src="https://www.google.com/recaptcha/enterprise.js" async defer></script>
 </head>
 
 <body>
@@ -70,7 +63,9 @@
             <label for="showLoginPassword" style="margin: 0; font-weight: 400; cursor: pointer; font-size: 0.9rem;">Show
               Password</label>
           </div>
-          <div id="recaptcha-login" style="margin-bottom: 1rem; display: flex; justify-content: center;"></div>
+          <div id="recaptcha-login" class="g-recaptcha" data-sitekey="6LcL004sAAAAALsn74XuPBG2bSC19YId79_PT6rB"
+            data-action="LOGIN" data-callback="onLoginCaptcha"
+            style="margin-bottom: 1rem; display: flex; justify-content: center;"></div>
           <button type="submit" class="btn btn-primary">
             Sign In <i class="fas fa-arrow-right"></i>
           </button>
@@ -117,7 +112,9 @@
             <label for="showSignupPassword"
               style="margin: 0; font-weight: 400; cursor: pointer; font-size: 0.9rem;">Show Password</label>
           </div>
-          <div id="recaptcha-signup" style="margin-bottom: 1rem; display: flex; justify-content: center;"></div>
+          <div id="recaptcha-signup" class="g-recaptcha" data-sitekey="6LcL004sAAAAALsn74XuPBG2bSC19YId79_PT6rB"
+            data-action="SIGNUP" data-callback="onSignupCaptcha"
+            style="margin-bottom: 1rem; display: flex; justify-content: center;"></div>
           <button type="submit" class="btn btn-primary">
             Create Account <i class="fas fa-user-plus"></i>
           </button>
@@ -225,10 +222,7 @@
 
           try {
             // Verify Recaptcha
-            if (typeof loginWidgetId === 'undefined') {
-              throw new Error("Recaptcha not loaded");
-            }
-            const token = grecaptcha.getResponse(loginWidgetId);
+            const token = window.loginToken;
             if (!token) {
               throw new Error("Please complete the CAPTCHA");
             }
@@ -237,7 +231,7 @@
             const verifyRes = await fetch('/verify-recaptcha', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ token })
+              body: JSON.stringify({ token, action: 'LOGIN' })
             });
             const verifyData = await verifyRes.json();
             if (!verifyData.success) {
@@ -251,7 +245,7 @@
             // Email Login Error
             loginError.textContent = "Error: " + error.message;
             loginError.style.display = 'block';
-            if (window.grecaptcha) grecaptcha.reset(loginWidgetId);
+            if (window.grecaptcha && window.grecaptcha.enterprise) grecaptcha.enterprise.reset();
           }
         });
       }
@@ -275,10 +269,7 @@
 
           try {
             // Verify Recaptcha
-            if (typeof signupWidgetId === 'undefined') {
-              throw new Error("Recaptcha not loaded");
-            }
-            const token = grecaptcha.getResponse(signupWidgetId);
+            const token = window.signupToken;
             if (!token) {
               throw new Error("Please complete the CAPTCHA");
             }
@@ -287,7 +278,7 @@
             const verifyRes = await fetch('/verify-recaptcha', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ token })
+              body: JSON.stringify({ token, action: 'SIGNUP' })
             });
             const verifyData = await verifyRes.json();
             if (!verifyData.success) {
@@ -309,7 +300,7 @@
             // Email Signup Error
             signupError.textContent = "Error: " + error.message;
             signupError.style.display = 'block';
-            if (window.grecaptcha) grecaptcha.reset(signupWidgetId);
+            if (window.grecaptcha && window.grecaptcha.enterprise) grecaptcha.enterprise.reset();
           }
         });
       }

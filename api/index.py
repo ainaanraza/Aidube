@@ -189,24 +189,40 @@ def verify_recaptcha():
     try:
         data = request.get_json()
         token = data.get('token')
+        action = data.get('action') # Expecting action from frontend
         
         if not token:
              return jsonify({'success': False, 'error': 'No token provided'}), 400
 
-        secret_key = "6LcL004sAAAAAFzcf4XNk9LXnv9vrEKBd75ydwd0"
-        verify_url = "https://www.google.com/recaptcha/api/siteverify"
+        # reCAPTCHA Enterprise Configuration
+        project_id = "aidube"
+        site_key = "6LcL004sAAAAALsn74XuPBG2bSC19YId79_PT6rB"
+        api_key = "AIzaSyDFkjR_NuVsXkB13M7oVTzqWq-ukvtx5dU"
+        
+        verify_url = f"https://recaptchaenterprise.googleapis.com/v1/projects/{project_id}/assessments?key={api_key}"
+        
         payload = {
-            'secret': secret_key,
-            'response': token
+            "event": {
+                "token": token,
+                "expectedAction": action,
+                "siteKey": site_key,
+            }
         }
         
-        response = requests.post(verify_url, data=payload)
+        response = requests.post(verify_url, json=payload)
         result = response.json()
         
-        if result.get('success'):
-            return jsonify({'success': True}), 200
+        # Check if the token is valid
+        if result.get('tokenProperties', {}).get('valid') == True:
+             # Check if the expected action matches
+             if result.get('tokenProperties', {}).get('action') == action:
+                 # Check risk score if needed, for now just pass
+                 # score = result.get('riskAnalysis', {}).get('score')
+                 return jsonify({'success': True, 'score': result.get('riskAnalysis', {}).get('score')}), 200
+             else:
+                 return jsonify({'success': False, 'error': 'Invalid action'}), 400
         else:
-            return jsonify({'success': False, 'errors': result.get('error-codes')}), 400
+            return jsonify({'success': False, 'error': result.get('tokenProperties', {}).get('invalidReason')}), 400
             
     except Exception as e:
         logging.error(f"Recaptcha verification failed: {e}")
