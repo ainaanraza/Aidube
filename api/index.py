@@ -3,34 +3,115 @@ from flask_cors import CORS
 from youtube_transcript_api import YouTubeTranscriptApi
 import logging
 import os
+import requests
+import re
+import random
 
 app = Flask(__name__)
 CORS(app)
 
 logging.basicConfig(level=logging.INFO)
 
-# Vercel handles static files automatically.
-# We ONLY define the API route here.
+
+# Invidious instances for fallback (Free API)
+INVIDIOUS_INSTANCES = [
+    "https://inv.nadeko.net",
+    "https://yewtu.be",
+    "https://vid.puffyan.us",
+    "https://invidious.drg.li",
+    "https://invidious.jing.rocks"
+]
+
+def clean_vtt(vtt_text):
+    """Cleans VTT content to plain text."""
+    lines = vtt_text.splitlines()
+    cleaned_lines = []
+    last_line = ""
+    
+    for line in lines:
+        line = line.strip()
+        # Skip headers, empty lines, and timestamps
+        if not line or line.startswith("WEBVTT") or line.startswith("Kind:") or line.startswith("Language:"):
+            continue
+        if re.match(r'^(?:\d{2}:)?\d{2}:\d{2}\.\d{3} --> (?:\d{2}:)?\d{2}:\d{2}\.\d{3}', line):
+            continue
+        
+        # Remove tags
+        line = re.sub(r'<[^>]+>', '', line)
+        
+        # Basic deduplication for rolling captions
+        if line != last_line:
+             cleaned_lines.append(line)
+             last_line = line
+             
+    return " ".join(cleaned_lines)
+
+def fetch_from_invidious(video_id):
+    """Fetches transcript from public Invidious instances."""
+    instances = INVIDIOUS_INSTANCES.copy()
+    random.shuffle(instances)
+    
+    for instance in instances:
+        try:
+            # 1. Get Captions List
+            resp = requests.get(f"{instance}/api/v1/captions/{video_id}", timeout=5)
+            if resp.status_code != 200:
+                continue
+            
+            data = resp.json()
+            captions = data.get('captions', [])
+            if not captions:
+                continue
+            
+            # 2. Find English track
+            selected_track = next((c for c in captions if c.get('languageCode') == 'en'), None)
+            
+            track_url = ""
+            if selected_track:
+                 track_url = f"{instance}{selected_track['url']}"
+            else:
+                 # Fallback: get first available and auto-translate
+                 if captions:
+                    first_track = captions[0]
+                    track_url = f"{instance}{first_track['url']}&tlang=en"
+            
+            if track_url:
+                track_resp = requests.get(track_url, timeout=10)
+                if track_resp.status_code == 200:
+                    return clean_vtt(track_resp.text)
+        except Exception as e:
+            logging.warning(f"Invidious instance {instance} failed: {e}")
+            continue
+            
+    return None
 
 @app.route('/transcript/<video_id>', methods=['GET'])
+
 def get_transcript(video_id):
     try:
         logging.info(f"Fetching transcript for video: {video_id}")
         
-        ytt_api = YouTubeTranscriptApi()
-        
+        # Configure Proxies from Environment Variable
+        proxies = None
+        if os.environ.get("YOUTUBE_PROXY"):
+            proxy_url = os.environ.get("YOUTUBE_PROXY")
+            proxies = {"http": proxy_url, "https": proxy_url}
+
         # Get the list of available transcripts
         try:
-            transcript_list = ytt_api.list(video_id)
+            transcript_list = YouTubeTranscriptApi.list_transcripts(video_id, proxies=proxies)
         except Exception as list_error:
             # If listing fails, try direct fetch (default behavior)
             logging.warning(f"Failed to list transcripts, trying direct fetch: {list_error}")
-            fetched_transcript = ytt_api.fetch(video_id)
-            full_text = " ".join([snippet.text for snippet in fetched_transcript])
-            return jsonify({
-                "video_id": video_id,
-                "transcript": full_text
-            })
+            try:
+                fetched_transcript = YouTubeTranscriptApi.get_transcript(video_id, proxies=proxies)
+                full_text = " ".join([snippet['text'] for snippet in fetched_transcript])
+                return jsonify({
+                    "video_id": video_id,
+                    "transcript": full_text
+                })
+            except Exception as fetch_error:
+                 raise fetch_error
 
         transcript = None
 
@@ -70,8 +151,8 @@ def get_transcript(video_id):
 
         fetched_transcript = transcript.fetch()
         
-        # Extract text
-        full_text = " ".join([snippet.text for snippet in fetched_transcript])
+        # Extract text (fetched_transcript is a list of dicts)
+        full_text = " ".join([snippet['text'] for snippet in fetched_transcript])
         
         return jsonify({
             "video_id": video_id,
@@ -81,18 +162,54 @@ def get_transcript(video_id):
         })
 
     except Exception as e:
-        logging.error(f"Error: {str(e)}")
-        # Try one last absolute fallback if the fancy logic fails
-        try:
-             ytt_api = YouTubeTranscriptApi()
-             fetched_transcript = ytt_api.fetch(video_id)
-             full_text = " ".join([snippet.text for snippet in fetched_transcript])
+        logging.warning(f"Primary Youtube API failed: {e}. Trying Invidious fallback...")
+        
+        # Fallback to Invidious
+        fallback_text = fetch_from_invidious(video_id)
+        if fallback_text:
+             logging.info("Invidious fallback successful.")
              return jsonify({
                 "video_id": video_id,
-                "transcript": full_text
+                "transcript": fallback_text,
+                "source": "invidious_fallback"
             })
-        except:
-            return jsonify({"error": str(e)}), 500
 
-# Serverless function entry point
+        status_code = 500
+        error_msg = str(e)
+        if "No transcript found" in error_msg:
+             status_code = 404
+        
+        logging.error(f"Error: {error_msg}")
+        return jsonify({"error": error_msg}), status_code
 
+
+
+@app.route('/verify-recaptcha', methods=['POST'])
+def verify_recaptcha():
+    try:
+        data = request.get_json()
+        token = data.get('token')
+        
+        if not token:
+             return jsonify({'success': False, 'error': 'No token provided'}), 400
+
+        secret_key = "6LcL004sAAAAAFzcf4XNk9LXnv9vrEKBd75ydwd0"
+        verify_url = "https://www.google.com/recaptcha/api/siteverify"
+        payload = {
+            'secret': secret_key,
+            'response': token
+        }
+        
+        response = requests.post(verify_url, data=payload)
+        result = response.json()
+        
+        if result.get('success'):
+            return jsonify({'success': True}), 200
+        else:
+            return jsonify({'success': False, 'errors': result.get('error-codes')}), 400
+            
+    except Exception as e:
+        logging.error(f"Recaptcha verification failed: {e}")
+        return jsonify({'error': str(e)}), 500
+
+# Check for main execution is not required in serverless environment

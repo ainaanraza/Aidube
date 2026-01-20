@@ -1,58 +1,49 @@
-# Your Classroom Project
+# Aidube
 
-An AI-powered educational platform that enhances your YouTube learning experience. This application turns standard video playlists into interactive classrooms with features like auto-generated notes, summaries, quizzes, and personalized learning roadmaps.
+**Aidube** is an AI-powered educational platform that aggregates free educational content from the internet and transforms it into structured, interactive classrooms. By leveraging advanced Generative AI, it turns passive content consumption into active learning with auto-generated notes, summaries, quizzes, and personalized learning roadmaps.
+
+> **Our Motive**: To democratize education by curating high-quality, free resources from the web and converting them into comprehensive courses with progress tracking and assessment tools—making structured learning accessible to everyone.
 
 ## 🚀 Features
 
-*   **Smart Playlist Viewer**: Watch YouTube playlists in a focused environment without distractions.
-*   **AI Study Aids**:
-    *   **Summaries**: Instantly generate concise summaries of video content using Gemini AI.
-    *   **Complete Notes**: Create detailed, formatted study notes from video transcripts.
-    *   **PDF Export**: Download your notes and summaries as PDF files.
-*   **Interactive Quizzes**: Generate custom tests based on the video content to verify your understanding.
-*   **Learning Roadmaps**: Generate personalized step-by-step learning paths for any topic.
-*   **Dashboard**:
-    *   Save your favorite playlists.
-    *   Track your watch history.
-    *   Resume where you left off.
-*   **User Accounts**: Sync your progress, saved playlists, and history across devices using Firebase Authentication.
+### 🎓 Smart Learning Environment
+*   **Focus Mode**: Watch educational content in a distraction-free environment tailored for deep learning.
+*   **Progress Tracking**: Automatically saves your watch history and position, allowing you to resume exactly where you left off.
+*   **Mobile Optimized**: A fully responsive design ensures a seamless experience on smartphones, tablets, and desktops.
+
+### 🧠 AI Study Companions
+*   **Auto-Generated Notes**: Instantly create detailed, formatted study notes from video transcripts, supporting content in multiple languages.
+*   **Smart Summaries**: Get concise overviews of long educational videos to quickly grasp key concepts using our AI engine.
+*   **Interactive Quizzes**: Generate subjective and objective tests based on the content to verify your understanding.
+*   **Personalized Roadmaps**: Create step-by-step learning paths for any topic, complete with resources and milestones.
+
+### 🔐 User & Security
+*   **User Authentication**: Secure Login and Sign-up capabilities.
+*   **Cloud Sync**: Your history, saved courses, and quotas are synced across all your devices.
+*   **Quota System**: A fair-usage system limits high-cost AI operations (e.g., 3 notes/day) to ensure sustainability.
+*   **Security Integration**: Integrated security measures to prevent abuse and ensure real user interaction.
 
 ## 🛠️ Technology Stack
 
-*   **Frontend**: HTML5, CSS3, Vanilla JavaScript (ES6+ Modules)
-*   **AI & Data**:
-    *   **Google Gemini API**: Powers the summarization, note-taking, and roadmap generation.
-    *   **YouTube Data API v3**: Fetches playlist and video metadata.
-*   **Backend & Persistence**:
-    *   **Firebase Authentication**: User login and security.
-    *   **Firebase Firestore**: Real-time database for saving user data.
-*   **Utilities**:
-    *   `jspdf`: For generating downloadable PDF files.
+### Frontend
+*   **Core**: HTML5, CSS3, Vanilla JavaScript (ES6+ Modules).
+*   **UI/UX**: Custom CSS Variables, Glassmorphism design, and a custom Toast Notification system.
+*   **State Management**: Firebase Auth & Firestore.
 
-## 📦 Setup & Installation
+### Backend (API)
+*   **Language**: Python 3.9+
+*   **Framework**: Flask (Serverless-ready).
+*   **Key Libraries**: `flask-cors`.
 
-1.  **Clone the repository**:
-    ```bash
-    git clone <repository-url>
-    ```
-2.  **Open the application**:
-    Since this is a static web application, you can simply open `index.html` in your browser.
-    *   *Recommended*: Use a local development server (e.g., Live Server in VS Code) for the best experience, especially with ES modules.
+### Services
+*   **AI**: Advanced Generative AI Models.
+*   **Database**: Google Firestore.
+*   **Auth**: Secure Authentication Service.
+*   **Video Data**: Public Video Content APIs.
 
-3.  **API Configuration**:
-    *   The project requires API keys for **Firebase**, **YouTube Data API**, and **Google Gemini**.
-    *   Check `js/firebase.js` and `js/utils.js` to configure your keys.
+## 🌐 Access the Platform
 
-## 📂 Project Structure
+Start your smart learning journey today at: **[aidube.com](https://aidube.com)**
 
-*   `index.html` - Main dashboard.
-*   `playlist.html` - Video player and study tools.
-*   `roadmap.html` - AI roadmap generator.
-*   `login.html` - Authentication page.
-*   `js/` - Application logic (modules).
-*   `css/` - Styling.
-
-## 🤝 Contributing
-
-Feel free to fork this project and submit pull requests for any enhancements or bug fixes.
-
+---
+*Developed by Ainaan Raza*

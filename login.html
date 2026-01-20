@@ -12,6 +12,25 @@
   <link rel="stylesheet" href="css/login.css" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
   <link rel="stylesheet" href="css/toast.css">
+  <script type="text/javascript">
+    var loginWidgetId;
+    var signupWidgetId;
+    var onloadCallback = function () {
+      // Render the recaptcha widget for login
+      if (document.getElementById('recaptcha-login')) {
+        loginWidgetId = grecaptcha.render('recaptcha-login', {
+          'sitekey': '6LcL004sAAAAALsn74XuPBG2bSC19YId79_PT6rB'
+        });
+      }
+      // Render the recaptcha widget for signup
+      if (document.getElementById('recaptcha-signup')) {
+        signupWidgetId = grecaptcha.render('recaptcha-signup', {
+          'sitekey': '6LcL004sAAAAALsn74XuPBG2bSC19YId79_PT6rB'
+        });
+      }
+    };
+  </script>
+  <script src="https://www.google.com/recaptcha/api.js?onload=onloadCallback&render=explicit" async defer></script>
 </head>
 
 <body>
@@ -43,13 +62,15 @@
           </div>
           <div class="form-group">
             <label for="loginPassword">Password</label>
-            <input type="password" id="loginPassword" class="form-input" placeholder="••••••••" required />
+            <input type="password" id="loginPassword" class="form-input" placeholder="••••••••" required
+              style="position: relative; z-index: 10;" />
           </div>
           <div class="form-group" style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1rem;">
             <input type="checkbox" id="showLoginPassword" style="width: auto; margin: 0;" />
             <label for="showLoginPassword" style="margin: 0; font-weight: 400; cursor: pointer; font-size: 0.9rem;">Show
               Password</label>
           </div>
+          <div id="recaptcha-login" style="margin-bottom: 1rem; display: flex; justify-content: center;"></div>
           <button type="submit" class="btn btn-primary">
             Sign In <i class="fas fa-arrow-right"></i>
           </button>
@@ -83,18 +104,20 @@
           </div>
           <div class="form-group">
             <label for="signupPassword">Password</label>
-            <input type="password" id="signupPassword" class="form-input" placeholder="Create a password" required />
+            <input type="password" id="signupPassword" class="form-input" placeholder="Create a password" required
+              style="position: relative; z-index: 10;" />
           </div>
           <div class="form-group">
             <label for="signupConfirmPassword">Confirm Password</label>
             <input type="password" id="signupConfirmPassword" class="form-input" placeholder="Confirm your password"
-              required />
+              required style="position: relative; z-index: 10;" />
           </div>
           <div class="form-group" style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1rem;">
             <input type="checkbox" id="showSignupPassword" style="width: auto; margin: 0;" />
             <label for="showSignupPassword"
               style="margin: 0; font-weight: 400; cursor: pointer; font-size: 0.9rem;">Show Password</label>
           </div>
+          <div id="recaptcha-signup" style="margin-bottom: 1rem; display: flex; justify-content: center;"></div>
           <button type="submit" class="btn btn-primary">
             Create Account <i class="fas fa-user-plus"></i>
           </button>
@@ -107,8 +130,7 @@
     </div>
   </div>
 
-  <footer
-    style="text-align: center; padding: 1rem 0; color: #fff; opacity: 0.8; position: absolute; bottom: 10px; width: 100%;">
+  <footer style="text-align: center; padding: 1rem 0; color: #fff; opacity: 0.8; width: 100%; margin-top: auto;">
     <p style="font-size: 0.8rem;">&copy; 2026 Aidube | <a href="privacy_policy.html"
         style="color: #fff; text-decoration: underline;">Privacy Policy</a></p>
   </footer>
@@ -202,6 +224,26 @@
           const password = document.getElementById('loginPassword').value;
 
           try {
+            // Verify Recaptcha
+            if (typeof loginWidgetId === 'undefined') {
+              throw new Error("Recaptcha not loaded");
+            }
+            const token = grecaptcha.getResponse(loginWidgetId);
+            if (!token) {
+              throw new Error("Please complete the CAPTCHA");
+            }
+
+            // Optional: Verify with backend
+            const verifyRes = await fetch('/verify-recaptcha', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ token })
+            });
+            const verifyData = await verifyRes.json();
+            if (!verifyData.success) {
+              throw new Error("CAPTCHA verification failed");
+            }
+
             await signInWithEmailAndPassword(auth, email, password);
             // Email Login success
             window.location.href = "index.html";
@@ -209,6 +251,7 @@
             // Email Login Error
             loginError.textContent = "Error: " + error.message;
             loginError.style.display = 'block';
+            if (window.grecaptcha) grecaptcha.reset(loginWidgetId);
           }
         });
       }
@@ -231,6 +274,26 @@
           }
 
           try {
+            // Verify Recaptcha
+            if (typeof signupWidgetId === 'undefined') {
+              throw new Error("Recaptcha not loaded");
+            }
+            const token = grecaptcha.getResponse(signupWidgetId);
+            if (!token) {
+              throw new Error("Please complete the CAPTCHA");
+            }
+
+            // Optional: Verify with backend
+            const verifyRes = await fetch('/verify-recaptcha', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ token })
+            });
+            const verifyData = await verifyRes.json();
+            if (!verifyData.success) {
+              throw new Error("CAPTCHA verification failed");
+            }
+
             const userCredential = await createUserWithEmailAndPassword(auth, email, password);
             // Email Signup success
 
@@ -246,6 +309,7 @@
             // Email Signup Error
             signupError.textContent = "Error: " + error.message;
             signupError.style.display = 'block';
+            if (window.grecaptcha) grecaptcha.reset(signupWidgetId);
           }
         });
       }

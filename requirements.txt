@@ -2,3 +2,4 @@ flask
 flask-cors
 youtube-transcript-api
 gunicorn
+requests
