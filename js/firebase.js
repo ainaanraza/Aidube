@@ -21,4 +21,12 @@ export { createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, on
 
 export const db = getFirestore(app);
 
+import { getAnalytics, setUserId, logEvent, setAnalyticsCollectionEnabled } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-analytics.js";
+export const analytics = getAnalytics(app);
+setAnalyticsCollectionEnabled(analytics, true);
+export { setUserId, logEvent };
+
+// Enable analytics collection (optional, enabled by default)
+// analytics.setAnalyticsCollectionEnabled(true);
+
 // Firebase initialized successfully

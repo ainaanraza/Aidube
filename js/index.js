@@ -1,4 +1,4 @@
-import { auth, db } from "./firebase.js";
+import { auth, db, analytics, setUserId, logEvent } from "./firebase.js";
 import { doc, setDoc, getDoc, getDocs, collection, deleteDoc, query, orderBy, addDoc, onSnapshot }
   from "https://www.gstatic.com/firebasejs/12.5.0/firebase-firestore.js";
 import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-auth.js";
@@ -14,6 +14,15 @@ const searchQuery = params.get("search");
 if (searchQuery) {
   document.getElementById("searchInput").value = searchQuery;
   fetchPlaylists(); // Automatically fetch playlists based on the query
+}
+
+const searchInputEl = document.getElementById("searchInput");
+if (searchInputEl) {
+  searchInputEl.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      fetchPlaylists();
+    }
+  });
 }
 
 function toggleSidebar() {
@@ -180,6 +189,13 @@ function renderPlaylistItems(playlists) {
 
 async function fetchPlaylists() {
   const searchQuery = document.getElementById("searchInput").value;
+
+  // Hide Resume section on search so results are visible immediately
+  const lastPlayedContainer = document.getElementById("lastPlayedContainer");
+  if (lastPlayedContainer) {
+    lastPlayedContainer.style.display = "none";
+  }
+
   const container = document.getElementById("playlistContainer");
   container.innerHTML = "<p>Loading playlists...</p>";
 
@@ -567,6 +583,10 @@ onAuthStateChanged(auth, (user) => {
 
 
   if (user) {
+    // Set User ID for Analytics
+    setUserId(analytics, user.uid);
+    logEvent(analytics, 'login', { method: 'firebase_auth' });
+
     user.reload().then(() => {
       if (userInfo) {
         userInfo.innerHTML = `
@@ -603,6 +623,7 @@ onAuthStateChanged(auth, (user) => {
     watchUserHistory()
 
   } else {
+    setUserId(analytics, null);
     if (userInfo) {
       userInfo.innerHTML = `
         <div class="user-avatar"><i class="fas fa-user-circle"></i></div>

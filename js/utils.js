@@ -124,7 +124,7 @@ export async function checkQuota(type) {
         }
         return true;
     } catch (e) {
-        console.error("Error checking quota:", e);
+        // Error checking quota
         // Fail open if network error, or fail closed? 
         // Let's assume fail open strictly for check, but usually it's better to warn.
         return true;
@@ -144,7 +144,7 @@ export async function incrementQuota(type) {
             lastUpdated: Date.now()
         }, { merge: true });
     } catch (e) {
-        console.error("Error incrementing quota:", e);
+        // Error incrementing quota
     }
 }
 

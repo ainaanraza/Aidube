@@ -185,7 +185,7 @@ window.playVideo = playVideo;
 
 async function fetchTranscript(videoId) {
   try {
-    console.log(`Fetching transcript from local backend for ${videoId}...`);
+    // console.log removed
     const response = await fetch(`/transcript/${videoId}`);
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
@@ -194,7 +194,7 @@ async function fetchTranscript(videoId) {
     const data = await response.json();
     return data.transcript;
   } catch (e) {
-    console.error("Local transcript fetch failed:", e);
+    // console.error removed
     return null;
   }
 }
@@ -213,7 +213,7 @@ async function fetchVideoDetails(videoId) {
       return `Title: ${snippet.title}\n\nDescription:\n${snippet.description}`;
     }, 3, 1000, rotateYouTubeKey);
   } catch (e) {
-    console.warn('Video details fetch failed:', e);
+    // console.warn removed
     return null;
   }
 }
@@ -240,7 +240,7 @@ async function generateUsingGemini(prompt, opts = {}) {
     } catch (err) {
       // Fallback for 404 (model not found) or 503 (service unavailable)
       if (err.message.includes('404') || err.message.includes('503')) {
-        console.warn('Primary model failed, using fallback:', err.message);
+        // console.warn removed
         const fallbackModelName = 'gemini-1.5-flash';
         const fallbackModel = genAI.getGenerativeModel({ model: fallbackModelName });
         const result = await fallbackModel.generateContent({
@@ -456,7 +456,7 @@ async function handleGenerateDocument(type, btnElement) {
     let sourceContext = "TRANSCRIPT";
 
     if (!transcript) {
-      console.log('Transcript fetch failed, falling back to video metadata...');
+      // console.log removed
       const metadata = await fetchVideoDetails(videoId);
       if (metadata) {
         transcript = metadata;
@@ -668,7 +668,7 @@ async function savePlaylistToDashboard(btnElement) {
 
   } catch (error) {
     // Error saving playlist
-    showNotification("Failed to save playlist. See console.", "error");
+    showNotification("Failed to save playlist.", "error");
   }
 }
 

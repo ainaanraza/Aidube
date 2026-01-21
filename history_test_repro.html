@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aidube | Learning History Test</title>
+    <link rel="stylesheet" href="css/index.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
+    <link rel="stylesheet" href="css/toast.css">
+</head>
+
+<body>
+    <header>
+        <div class="header-content">
+            <div class="left-section">
+                <div class="logo-area">
+                    <i class="fa-solid fa-clock-rotate-left"></i>
+                    <span>History</span>
+                </div>
+            </div>
+            <div class="nav-actions">
+                <a href="#" class="btn-secondary" style="text-decoration: none;">
+                    <i class="fas fa-arrow-left"></i> Dashboard
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <div class="container">
+        <main class="main-content" style="max-width: 800px; margin: 0 auto; width: 100%;">
+            <div class="sidebar-card" style="margin-bottom: 2rem; border-style: dashed; text-align: center;">
+                <h2 style="font-size: 1.5rem; font-weight: 800; color: var(--text);">Your Learning Trail</h2>
+                <p style="color: var(--text-muted); margin-top: 0.5rem;">Pick up where you left off in your professional
+                    development.</p>
+            </div>
+
+            <div id="lectureHistory">
+                <!-- TEST ITEM 1: Long title -->
+                <div class="history-item">
+                    <div class="history-thumb-wrapper">
+                        <img src="https://via.placeholder.com/300x200" alt="Test Title">
+                    </div>
+                    <div class="history-info">
+                        <p class="history-title">This is a very very very long title that simulates a real world
+                            scenario where the title is too long for the mobile screen</p>
+                        <div class="history-actions">
+                            <button class="btn-primary">
+                                <i class="fas fa-play"></i> Resume
+                            </button>
+                            <button class="btn-secondary">
+                                <i class="fas fa-bookmark"></i> Save
+                            </button>
+                            <button class="btn-ghost" style="color: #ef4444;">
+                                <i class="fas fa-trash-alt"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TEST ITEM 2: Normal -->
+                <div class="history-item">
+                    <div class="history-thumb-wrapper">
+                        <img src="https://via.placeholder.com/300x200" alt="Test Title 2">
+                    </div>
+                    <div class="history-info">
+                        <p class="history-title">Short Title</p>
+                        <div class="history-actions">
+                            <button class="btn-primary">
+                                <i class="fas fa-play"></i> Resume
+                            </button>
+                            <button class="btn-secondary">
+                                <i class="fas fa-bookmark"></i> Save
+                            </button>
+                            <button class="btn-ghost" style="color: #ef4444;">
+                                <i class="fas fa-trash-alt"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <div style="margin-top: 2rem; border-top: 1px solid var(--border); padding-top: 2rem;">
+                <button class="clear-button btn-ghost" id="clearAllHistoryButton"
+                    style="width: 100%; justify-content: center; height: 50px; font-size: 1rem;">
+                    <i class="fas fa-trash-alt"></i> Wipe Learning History
+                </button>
+            </div>
+        </main>
+    </div>
+</body>
+
+</html>

@@ -10,7 +10,7 @@ import random
 app = Flask(__name__)
 CORS(app)
 
-logging.basicConfig(level=logging.INFO)
+logging.disable(logging.CRITICAL)
 
 
 # Invidious instances for fallback (Free API)

@@ -236,7 +236,7 @@ async function generateRoadmap(topic) {
     roadmapContainer.innerHTML = "";
 
     if (!responseText || responseText.trim() === "") {
-      roadmapContainer.innerHTML = `< div class="error-message" > Unable to generate roadmap.Please check your API key and network.</div > `;
+      roadmapContainer.innerHTML = `<div class="error-message">Unable to generate roadmap. Please check network.</div>`;
       return;
     }
 
@@ -253,7 +253,7 @@ async function generateRoadmap(topic) {
 
       const item = document.createElement("div");
       item.className = "roadmap-item animate__animated animate__fadeInUp";
-      item.style.animationDelay = `${index * 0.1} s`;
+      item.style.animationDelay = `${index * 0.1}s`;
       item.innerHTML = `
       <span class="roadmap-step">Milestone ${index + 1}</span>
         <h3 class="roadmap-title">${sanitizeHTML(mainTopic)}</h3>
@@ -273,7 +273,7 @@ async function generateRoadmap(topic) {
     saveButton.style.width = "100%";
     saveButton.style.justifyContent = "center";
     saveButton.style.padding = "1rem";
-    saveButton.innerHTML = `< i class="fas fa-bookmark" ></i > Save This Entire Journey`;
+    saveButton.innerHTML = `<i class="fas fa-bookmark"></i> Save This Entire Journey`;
     saveButton.onclick = () => saveRoadmap(topic, steps);
     roadmapContainer.appendChild(saveButton);
 
@@ -281,7 +281,7 @@ async function generateRoadmap(topic) {
     await incrementQuota('roadmap');
 
   } catch (err) {
-    roadmapContainer.innerHTML = `< div class="error-message" > Error generating roadmap.Open browser console for details.</div > `;
+    roadmapContainer.innerHTML = `<div class="error-message">Error generating roadmap. Please try again later.</div>`;
   }
 }
 
