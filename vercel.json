@@ -8,5 +8,25 @@
       "source": "/verify-recaptcha",
       "destination": "/api/index.py"
     }
+  ],
+  "headers": [
+    {
+      "source": "/(.*).(jpg|jpeg|png|gif|svg|ico|css|js)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
+        }
+      ]
+    },
+    {
+      "source": "/(.*).(html)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=0, must-revalidate"
+        }
+      ]
+    }
   ]
 }

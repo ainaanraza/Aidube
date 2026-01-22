@@ -519,111 +519,131 @@ updateSavedPlaylists();
 renderLastPlayed();
 updateSavedRoadmaps();
 
-onAuthStateChanged(auth, async (user) => {
-  if (!user) return;
-  try {
-    const cloud = await loadPlaylistsFromCloud();
-    if (cloud && cloud.length) {
-      // merge cloud into local and re-render sidebar
-      const local = JSON.parse(localStorage.getItem("savedPlaylists") || "[]");
-      const merged = [...cloud, ...local].reduce((acc, p) => {
-        if (!acc.some(x => x.id === p.id)) acc.push(p);
-        return acc;
-      }, []);
-      localStorage.setItem("savedPlaylists", JSON.stringify(merged));
-      updateSavedPlaylists();
-    }
-  } catch (e) {
-    // Load cloud playlists failed
-  }
-});
-
-onAuthStateChanged(auth, async (user) => {
-  if (!user) return;
-
-  // migrate playlists
-  try {
-    const localPlaylists = JSON.parse(localStorage.getItem("savedPlaylists") || "[]");
-    for (const p of localPlaylists) {
-      await setDoc(doc(db, "users", user.uid, "playlists", p.id), {
-        title: p.title, id: p.id, savedAt: Date.now()
-      }, { merge: true });
-    }
-  } catch (e) { /* Playlist migration failed */ }
-
-  // migrate history
-  try {
-    const localHistory = JSON.parse(localStorage.getItem("lectureHistory") || "[]");
-    for (const h of localHistory) {
-      await setDoc(doc(db, "users", user.uid, "history", h.id), {
-        title: h.title, id: h.id, thumbnail: h.thumbnail || null, playedAt: Date.now()
-      }, { merge: true });
-    }
-  } catch (e) { /* History migration failed */ }
-
-  // migrate roadmaps
-  try {
-    const localRoadmaps = JSON.parse(localStorage.getItem("savedRoadmaps") || "[]");
-    const snap = await getDocs(collection(db, "users", user.uid, "roadmaps"));
-    const existingTopics = snap.docs.map(d => d.data().topic);
-
-    for (const r of localRoadmaps) {
-      if (!existingTopics.includes(r.topic)) {
-        await addDoc(collection(db, "users", user.uid, "roadmaps"), {
-          topic: r.topic, steps: r.steps, savedAt: Date.now()
-        });
-      }
-    }
-  } catch (e) { /* Roadmap migration failed */ }
-});
-
-onAuthStateChanged(auth, (user) => {
+// Profile Caching
+function renderCachedProfile() {
+  const cachedProfile = JSON.parse(localStorage.getItem("userProfile"));
   const userInfo = document.getElementById("userInfo");
+  const drawerUserInfo = document.getElementById("drawerUserInfo");
+  const dLogout = document.getElementById("drawerLogoutBtn");
 
+  if (cachedProfile) {
+    if (userInfo) {
+      userInfo.innerHTML = `
+        <div class="user-avatar">
+          <img src="${cachedProfile.photoURL}" style="width:100%; height:100%; border-radius:50%">
+        </div>
+        <div class="user-details">
+          <p>${sanitizeHTML(cachedProfile.displayName)}</p>
+          <span>${sanitizeHTML(cachedProfile.email)}</span>
+        </div>
+      `;
+    }
+    if (drawerUserInfo) {
+      drawerUserInfo.innerHTML = `
+           <div class="user-avatar">
+             <img src="${cachedProfile.photoURL}" style="width:100%; height:100%; border-radius:50%">
+           </div>
+           <h3>${sanitizeHTML(cachedProfile.displayName)}</h3>
+           <p>${sanitizeHTML(cachedProfile.email)}</p>
+         `;
+    }
+    if (dLogout) dLogout.style.display = "flex";
+  }
+}
 
+// Render cached profile immediately on load
+renderCachedProfile();
+
+// Consolidate Auth Logic
+onAuthStateChanged(auth, async (user) => {
+  const userInfo = document.getElementById("userInfo");
+  const drawerUserInfo = document.getElementById("drawerUserInfo");
+  const dLogout = document.getElementById("drawerLogoutBtn");
 
   if (user) {
-    // Set User ID for Analytics
+    // 1. Update Profile & Cache
+    const profileData = {
+      displayName: user.displayName || "Learner",
+      email: user.email,
+      photoURL: user.photoURL || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(user.displayName || 'User') + '&background=random'
+    };
+    localStorage.setItem("userProfile", JSON.stringify(profileData));
+    renderCachedProfile(); // Update UI with fresh data
+
+    // 2. Set Analytics User ID
     setUserId(analytics, user.uid);
     logEvent(analytics, 'login', { method: 'firebase_auth' });
 
-    user.reload().then(() => {
-      if (userInfo) {
-        userInfo.innerHTML = `
-          <div class="user-avatar">
-            <img src="${user.photoURL || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(user.displayName || 'User') + '&background=random'}" style="width:100%; height:100%; border-radius:50%">
-          </div>
-          <div class="user-details">
-            <p>${sanitizeHTML(user.displayName) || "Learner"}</p>
-            <span>${sanitizeHTML(user.email)}</span>
-          </div>
-        `;
+    // 3. Update Lists (Local/UI)
+    updateSavedPlaylists();
+    updateSavedRoadmaps();
+    updateLectureHistory();
+
+    // 4. Cloud Sync - Download
+    try {
+      const cloud = await loadPlaylistsFromCloud();
+      if (cloud && cloud.length) {
+        const local = JSON.parse(localStorage.getItem("savedPlaylists") || "[]");
+        const merged = [...cloud, ...local].reduce((acc, p) => {
+          if (!acc.some(x => x.id === p.id)) acc.push(p);
+          return acc;
+        }, []);
+        localStorage.setItem("savedPlaylists", JSON.stringify(merged));
+        updateSavedPlaylists();
       }
+    } catch (e) { /* Load cloud playlists failed */ }
 
-      // Update Drawer User Info
-      const drawerUserInfo = document.getElementById("drawerUserInfo");
-      if (drawerUserInfo) {
-        drawerUserInfo.innerHTML = `
-           <div class="user-avatar">
-             <img src="${user.photoURL || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(user.displayName || 'User') + '&background=random'}" style="width:100%; height:100%; border-radius:50%">
-           </div>
-           <h3>${sanitizeHTML(user.displayName) || "Learner"}</h3>
-           <p>${sanitizeHTML(user.email)}</p>
-         `;
-        const dLogout = document.getElementById("drawerLogoutBtn");
-        if (dLogout) dLogout.style.display = "flex";
-      }
+    // 5. Cloud Sync - Upload (Migration) - Optimized to run once per session (1 hour)
+    const lastMigration = parseInt(localStorage.getItem("lastMigrationTimestamp") || "0");
+    const ONE_HOUR = 60 * 60 * 1000;
 
-    });
+    if (Date.now() - lastMigration > ONE_HOUR) {
+      // Perform full migration
+      try {
+        const localPlaylists = JSON.parse(localStorage.getItem("savedPlaylists") || "[]");
+        for (const p of localPlaylists) {
+          await setDoc(doc(db, "users", user.uid, "playlists", p.id), {
+            title: p.title, id: p.id, savedAt: Date.now()
+          }, { merge: true });
+        }
+      } catch (e) { /* Playlist migration failed */ }
 
+      try {
+        const localHistory = JSON.parse(localStorage.getItem("lectureHistory") || "[]");
+        for (const h of localHistory) {
+          await setDoc(doc(db, "users", user.uid, "history", h.id), {
+            title: h.title, id: h.id, thumbnail: h.thumbnail || null, playedAt: Date.now()
+          }, { merge: true });
+        }
+      } catch (e) { /* History migration failed */ }
 
+      try {
+        const localRoadmaps = JSON.parse(localStorage.getItem("savedRoadmaps") || "[]");
+        const snap = await getDocs(collection(db, "users", user.uid, "roadmaps"));
+        const existingTopics = snap.docs.map(d => d.data().topic);
 
+        for (const r of localRoadmaps) {
+          if (!existingTopics.includes(r.topic)) {
+            await addDoc(collection(db, "users", user.uid, "roadmaps"), {
+              topic: r.topic, steps: r.steps, savedAt: Date.now()
+            });
+          }
+        }
+      } catch (e) { /* Roadmap migration failed */ }
 
-    watchUserRoadmaps()
-    watchUserHistory()
+      localStorage.setItem("lastMigrationTimestamp", Date.now().toString());
+    }
+
+    // 6. Setup Listeners
+    watchUserRoadmaps();
+    watchUserHistory();
 
   } else {
+    // No User
+    localStorage.removeItem("userProfile"); // Clear sensitive cache
     setUserId(analytics, null);
+
+    // Reset UI to Guest
     if (userInfo) {
       userInfo.innerHTML = `
         <div class="user-avatar"><i class="fas fa-user-circle"></i></div>
@@ -633,9 +653,6 @@ onAuthStateChanged(auth, (user) => {
         </div>
       `;
     }
-
-    // Update Drawer User Info (Guest)
-    const drawerUserInfo = document.getElementById("drawerUserInfo");
     if (drawerUserInfo) {
       drawerUserInfo.innerHTML = `
         <div class="user-avatar" style="background: var(--text-muted);"><i class="fas fa-user-circle"></i></div>
@@ -643,20 +660,8 @@ onAuthStateChanged(auth, (user) => {
         <p>Sign in to save your progress</p>
         <button class="btn-primary" onclick="window.location.href='login.html'" style="margin-top:0.5rem;">Sign In</button>
       `;
-      const dLogout = document.getElementById("drawerLogoutBtn");
-      if (dLogout) dLogout.style.display = "none";
     }
-
-
-
-  }
-});
-
-onAuthStateChanged(auth, (user) => {
-  if (user) {
-    updateSavedPlaylists();
-    updateSavedRoadmaps();
-    updateLectureHistory();
+    if (dLogout) dLogout.style.display = "none";
   }
 });
 
