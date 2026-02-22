@@ -23,17 +23,8 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
   <link rel="stylesheet" href="css/toast.css">
   <script>
-    // Global callbacks for reCAPTCHA
-    window.loginToken = null;
-    window.signupToken = null;
-    window.onLoginCaptcha = function (token) {
-      window.loginToken = token;
-    };
-    window.onSignupCaptcha = function (token) {
-      window.signupToken = token;
-    };
+    // reCAPTCHA is disabled
   </script>
-  <script src="https://www.google.com/recaptcha/enterprise.js" async defer></script>
 </head>
 
 <body>
@@ -68,14 +59,16 @@
             <input type="password" id="loginPassword" class="form-input" placeholder="••••••••" required
               style="position: relative; z-index: 10;" />
           </div>
-          <div class="form-group" style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1rem;">
-            <input type="checkbox" id="showLoginPassword" style="width: auto; margin: 0;" />
-            <label for="showLoginPassword" style="margin: 0; font-weight: 400; cursor: pointer; font-size: 0.9rem;">Show
-              Password</label>
+          <div class="form-group"
+            style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+            <div style="display: flex; align-items: center; gap: 0.5rem;">
+              <input type="checkbox" id="showLoginPassword" style="width: auto; margin: 0;" />
+              <label for="showLoginPassword"
+                style="margin: 0; font-weight: 400; cursor: pointer; font-size: 0.9rem;">Show
+                Password</label>
+            </div>
+            <span id="showForgotPassword" class="toggle-link" style="font-size: 0.9rem;">Forgot password?</span>
           </div>
-          <div id="recaptcha-login" class="g-recaptcha" data-sitekey="6LcL004sAAAAALsn74XuPBG2bSC19YId79_PT6rB"
-            data-action="LOGIN" data-callback="onLoginCaptcha"
-            style="margin-bottom: 1rem; display: flex; justify-content: center;"></div>
           <button type="submit" class="btn btn-primary">
             Sign In <i class="fas fa-arrow-right"></i>
           </button>
@@ -122,9 +115,6 @@
             <label for="showSignupPassword"
               style="margin: 0; font-weight: 400; cursor: pointer; font-size: 0.9rem;">Show Password</label>
           </div>
-          <div id="recaptcha-signup" class="g-recaptcha" data-sitekey="6LcL004sAAAAALsn74XuPBG2bSC19YId79_PT6rB"
-            data-action="SIGNUP" data-callback="onSignupCaptcha"
-            style="margin-bottom: 1rem; display: flex; justify-content: center;"></div>
           <button type="submit" class="btn btn-primary">
             Create Account <i class="fas fa-user-plus"></i>
           </button>
@@ -132,6 +122,28 @@
 
         <div class="toggle-text">
           Already have an account? <span id="showLogin" class="toggle-link">Sign in</span>
+        </div>
+      </div>
+
+      <div id="forgotPasswordForm" class="hidden">
+        <h1>Reset Password</h1>
+        <p class="subtitle">Enter your email to receive a password reset link.</p>
+
+        <div id="forgotPasswordError" class="error-message"></div>
+
+        <form id="emailForgotPasswordForm">
+          <div class="form-group">
+            <label for="forgotPasswordEmail">Email Address</label>
+            <input type="email" id="forgotPasswordEmail" class="form-input" placeholder="name@example.com" required />
+          </div>
+
+          <button type="submit" class="btn btn-primary" style="margin-bottom: 1rem;">
+            Send Reset Link <i class="fas fa-envelope"></i>
+          </button>
+        </form>
+
+        <div class="toggle-text">
+          Remember your password? <span id="showLoginFromForgot" class="toggle-link">Sign in</span>
         </div>
       </div>
     </div>
@@ -149,7 +161,7 @@
       return false;
     };
 
-    import { auth, googleProvider, signInWithPopup, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, updateProfile } from "./js/firebase.js";
+    import { auth, googleProvider, signInWithPopup, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, updateProfile, sendPasswordResetEmail } from "./js/firebase.js";
     import { showNotification } from "./js/utils.js";
 
     // Login script loaded
@@ -157,10 +169,16 @@
     try {
       const loginForm = document.getElementById('loginForm');
       const signupForm = document.getElementById('signupForm');
+      const forgotPasswordForm = document.getElementById('forgotPasswordForm');
+
       const showSignupBtn = document.getElementById('showSignup');
       const showLoginBtn = document.getElementById('showLogin');
+      const showForgotPasswordBtn = document.getElementById('showForgotPassword');
+      const showLoginFromForgotBtn = document.getElementById('showLoginFromForgot');
+
       const loginError = document.getElementById('loginError');
       const signupError = document.getElementById('signupError');
+      const forgotPasswordError = document.getElementById('forgotPasswordError');
 
       if (!showSignupBtn || !showLoginBtn) {
         // Toggle buttons not found
@@ -170,18 +188,34 @@
       showSignupBtn.addEventListener('click', () => {
         // Switching to Signup form
         loginForm.classList.add('hidden');
+        forgotPasswordForm.classList.add('hidden');
         signupForm.classList.remove('hidden');
         signupForm.classList.add('fade-in');
         loginError.style.display = 'none';
       });
 
-      showLoginBtn.addEventListener('click', () => {
+      const switchToLogin = () => {
         // Switching to Login form
         signupForm.classList.add('hidden');
+        forgotPasswordForm.classList.add('hidden');
         loginForm.classList.remove('hidden');
         loginForm.classList.add('fade-in');
         signupError.style.display = 'none';
-      });
+        forgotPasswordError.style.display = 'none';
+      };
+
+      showLoginBtn.addEventListener('click', switchToLogin);
+      if (showLoginFromForgotBtn) showLoginFromForgotBtn.addEventListener('click', switchToLogin);
+
+      if (showForgotPasswordBtn) {
+        showForgotPasswordBtn.addEventListener('click', () => {
+          loginForm.classList.add('hidden');
+          signupForm.classList.add('hidden');
+          forgotPasswordForm.classList.remove('hidden');
+          forgotPasswordForm.classList.add('fade-in');
+          loginError.style.display = 'none';
+        });
+      }
 
       // Show/Hide Password Logic
       const togglePasswordVisibility = (checkboxId, ...inputIds) => {
@@ -231,23 +265,6 @@
           const password = document.getElementById('loginPassword').value;
 
           try {
-            // Verify Recaptcha
-            const token = window.loginToken;
-            if (!token) {
-              throw new Error("Please complete the CAPTCHA");
-            }
-
-            // Optional: Verify with backend
-            const verifyRes = await fetch('/verify-recaptcha', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ token, action: 'LOGIN' })
-            });
-            const verifyData = await verifyRes.json();
-            if (!verifyData.success) {
-              throw new Error("CAPTCHA verification failed");
-            }
-
             await signInWithEmailAndPassword(auth, email, password);
             // Email Login success
             window.location.href = "index.html";
@@ -255,7 +272,6 @@
             // Email Login Error
             loginError.textContent = "Error: " + error.message;
             loginError.style.display = 'block';
-            if (window.grecaptcha && window.grecaptcha.enterprise) grecaptcha.enterprise.reset();
           }
         });
       }
@@ -278,23 +294,6 @@
           }
 
           try {
-            // Verify Recaptcha
-            const token = window.signupToken;
-            if (!token) {
-              throw new Error("Please complete the CAPTCHA");
-            }
-
-            // Optional: Verify with backend
-            const verifyRes = await fetch('/verify-recaptcha', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ token, action: 'SIGNUP' })
-            });
-            const verifyData = await verifyRes.json();
-            if (!verifyData.success) {
-              throw new Error("CAPTCHA verification failed");
-            }
-
             const userCredential = await createUserWithEmailAndPassword(auth, email, password);
             // Email Signup success
 
@@ -310,7 +309,24 @@
             // Email Signup Error
             signupError.textContent = "Error: " + error.message;
             signupError.style.display = 'block';
-            if (window.grecaptcha && window.grecaptcha.enterprise) grecaptcha.enterprise.reset();
+          }
+        });
+      }
+
+      // Forgot Password Logic
+      const emailForgotPasswordForm = document.getElementById('emailForgotPasswordForm');
+      if (emailForgotPasswordForm) {
+        emailForgotPasswordForm.addEventListener('submit', async (e) => {
+          e.preventDefault();
+          const email = document.getElementById('forgotPasswordEmail').value;
+
+          try {
+            await sendPasswordResetEmail(auth, email);
+            showNotification("Password reset email sent! Check your inbox.", "success");
+            switchToLogin();
+          } catch (error) {
+            forgotPasswordError.textContent = "Error: " + error.message;
+            forgotPasswordError.style.display = 'block';
           }
         });
       }

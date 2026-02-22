@@ -216,6 +216,9 @@ async function fetchPlaylists() {
       return;
     }
 
+    localStorage.setItem("lastSearchQuery", searchQuery);
+    localStorage.setItem("lastSearchResults", JSON.stringify(data.items));
+
     const user = auth.currentUser;
     if (user) {
       setDoc(doc(db, "users", user.uid, "lastSearch", "latest"), {
@@ -484,28 +487,19 @@ const activeQuery = params.get("search");
 
 if (!activeQuery) {
   const searchInput = document.getElementById("searchInput");
-  if (auth.currentUser && searchInput) {
-    // Load last search from Firestore
-    const docRef = doc(db, "users", auth.currentUser.uid, "lastSearch", "latest");
-    getDoc(docRef)
-      .then(docSnap => {
-        if (docSnap.exists()) {
-          const data = docSnap.data();
-          searchInput.value = data.query;
-          renderPlaylists(data.results);
-        }
-      })
-      .catch(() => { });
-  } else if (searchInput) {
-    // Fallback to localStorage (if no logged-in user or if desired)
+  if (searchInput) {
     const savedResults = localStorage.getItem("lastSearchResults");
     const savedQuery = localStorage.getItem("lastSearchQuery");
-    if (savedResults && savedQuery) {
+    if (savedResults && savedQuery && savedResults !== "undefined") {
       searchInput.value = savedQuery;
       renderPlaylists(JSON.parse(savedResults));
+
+      const lastPlayedContainer = document.getElementById("lastPlayedContainer");
+      if (lastPlayedContainer) {
+        lastPlayedContainer.style.display = "none";
+      }
     }
   }
-
 }
 
 
@@ -638,6 +632,69 @@ onAuthStateChanged(auth, async (user) => {
     watchUserRoadmaps();
     watchUserHistory();
 
+    // 7. Field of Interest (First Login Experience)
+    const profileRef = doc(db, "users", user.uid, "profile", "settings");
+    getDoc(profileRef).then((profileSnap) => {
+      let hasInterest = false;
+      let interestVal = "";
+
+      if (profileSnap.exists() && profileSnap.data().interest) {
+        hasInterest = true;
+        interestVal = profileSnap.data().interest;
+      }
+
+      const modal = document.getElementById("interestModal");
+      const overlay = document.getElementById("interestModalOverlay");
+
+      if (!hasInterest) {
+        // First login! Ask for interest
+        if (modal && overlay) {
+          modal.style.display = "block";
+          overlay.style.display = "block";
+
+          const submitInterest = async () => {
+            const interestInput = document.getElementById("interestInput").value.trim();
+            if (interestInput) {
+              // Save to Firebase
+              await setDoc(profileRef, { interest: interestInput }, { merge: true });
+
+              // Hide modal
+              modal.style.display = "none";
+              overlay.style.display = "none";
+
+              // Set UI & fetch
+              const searchInput = document.getElementById("searchInput");
+              if (searchInput) {
+                searchInput.value = interestInput;
+                fetchPlaylists(); // Trigger search and recommendations
+              }
+              showNotification("Your personalized feed is ready!", "success");
+            } else {
+              showNotification("Please enter a field of interest.", "warning");
+            }
+          };
+
+          document.getElementById("saveInterestBtn").onclick = submitInterest;
+          document.getElementById("interestInput").addEventListener("keydown", (e) => {
+            if (e.key === "Enter") submitInterest();
+          });
+        }
+      } else {
+        // Returning user with an interest
+        // Auto-fill and search if they don't have an active query or cached search from session
+        const activeQuery = new URLSearchParams(window.location.search).get("search");
+        const savedQuery = localStorage.getItem("lastSearchQuery");
+
+        if (!activeQuery && !savedQuery) {
+          const searchInput = document.getElementById("searchInput");
+          if (searchInput) {
+            searchInput.value = interestVal;
+            fetchPlaylists();
+          }
+        }
+      }
+    }).catch(console.error);
+
   } else {
     // No User
     localStorage.removeItem("userProfile"); // Clear sensitive cache
@@ -755,6 +812,7 @@ if (drawerLogoutBtn) {
 
 // Call this once when the app loads
 cleanupInvalidHistory();
+
 export { updateLectureHistory, clearAllLectureHistory };
 
 
