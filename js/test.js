@@ -125,11 +125,45 @@ function submitTest() {
   let score = 0;
 
   correctAnswers.forEach((correct, index) => {
+    const allOptions = document.querySelectorAll(`input[name="q${index}"]`);
+    allOptions.forEach(opt => {
+      opt.disabled = true;
+      opt.parentElement.style.backgroundColor = '';
+      opt.parentElement.style.borderColor = '#e5e7eb';
+    });
+
     const selected = document.querySelector(`input[name="q${index}"]:checked`);
-    if (selected && parseInt(selected.value) === correct) {
-      score++;
+    const correctInput = document.querySelector(`input[name="q${index}"][value="${correct}"]`);
+
+    if (selected) {
+      if (parseInt(selected.value) === correct) {
+        score++;
+        selected.parentElement.style.backgroundColor = '#dcfce7';
+        selected.parentElement.style.borderColor = '#22c55e';
+      } else {
+        selected.parentElement.style.backgroundColor = '#fee2e2';
+        selected.parentElement.style.borderColor = '#ef4444';
+
+        if (correctInput) {
+          correctInput.parentElement.style.backgroundColor = '#dcfce7';
+          correctInput.parentElement.style.borderColor = '#22c55e';
+        }
+      }
+    } else {
+      if (correctInput) {
+        correctInput.parentElement.style.backgroundColor = '#dcfce7';
+        correctInput.parentElement.style.borderColor = '#22c55e';
+      }
     }
   });
+
+  const submitBtn = document.querySelector('button[onclick="submitTest()"]');
+  if (submitBtn) {
+    submitBtn.disabled = true;
+    submitBtn.style.opacity = '0.5';
+    submitBtn.style.cursor = 'not-allowed';
+    submitBtn.textContent = 'Submitted';
+  }
 
   showNotification(`You scored ${score} out of ${correctAnswers.length} !`, "success");
 }
