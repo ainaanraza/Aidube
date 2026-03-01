@@ -84,6 +84,12 @@ function redirectToRoadmap() {
 }
 
 function redirectToResearch() {
+  const user = auth.currentUser;
+  if (!user) {
+    showNotification("You must be logged in to use the resource feature.", "warning");
+    return;
+  }
+
   const query = document.getElementById("searchInput").value;
   if (query) {
     window.location.href = `research.html?topic=${encodeURIComponent(query)}`;

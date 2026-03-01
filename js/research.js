@@ -1,6 +1,8 @@
 // js/research.js
 import { GoogleGenerativeAI } from "https://cdn.jsdelivr.net/npm/@google/generative-ai/+esm";
 import { getGeminiApiKey, rotateGeminiKey } from "./utils.js";
+import { auth } from "./firebase.js";
+import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-auth.js";
 
 document.addEventListener("DOMContentLoaded", () => {
     const params = new URLSearchParams(window.location.search);
@@ -14,16 +16,24 @@ document.addEventListener("DOMContentLoaded", () => {
     const resourcesContainer = document.getElementById("resourcesContainer");
     const errorMsg = document.getElementById("errorMsg");
 
-    if (!topic) {
-        topicTitleEl.textContent = "Unknown Topic";
-        showError("No topic was specified for research. Please go back to the dashboard and try again.");
-        return;
-    }
+    onAuthStateChanged(auth, (user) => {
+        if (!user) {
+            topicTitleEl.textContent = "Authentication Required";
+            showError("You must be logged in to use the resource feature.");
+            return;
+        }
 
-    topicTitleEl.textContent = topic;
+        if (!topic) {
+            topicTitleEl.textContent = "Unknown Topic";
+            showError("No topic was specified for research. Please go back to the dashboard and try again.");
+            return;
+        }
 
-    // Start Research Process
-    runResearchEngine(topic);
+        topicTitleEl.textContent = topic;
+
+        // Start Research Process
+        runResearchEngine(topic);
+    });
 
     async function runResearchEngine(searchTopic) {
         try {
