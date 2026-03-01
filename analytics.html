@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aidube | Analytics & Rewards</title>
+    <meta name="description" content="View your learning progress and earn rewards on Aidube.">
+    <link rel="icon" href="aidube_logo2.png" type="image/png">
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
+    <link rel="stylesheet" href="css/index.css">
+    <link rel="stylesheet" href="css/toast.css">
+
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <!-- Google AdSense Auto Ads -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1717533159502136"
+        crossorigin="anonymous"></script>
+
+    <style>
+        .analytics-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+            width: 100%;
+        }
+
+        /* Stats Cards */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .stat-card {
+            background: var(--surface);
+            backdrop-filter: blur(8px);
+            border: 1px solid var(--glass-border);
+            border-radius: var(--radius-lg);
+            padding: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+            box-shadow: var(--shadow-sm);
+            transition: var(--transition);
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: var(--shadow-md);
+            border-color: var(--primary-light);
+        }
+
+        .stat-icon {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.75rem;
+            color: white;
+            flex-shrink: 0;
+        }
+
+        .icon-blue {
+            background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+        }
+
+        .icon-green {
+            background: linear-gradient(135deg, #22c55e, #15803d);
+        }
+
+        .icon-purple {
+            background: linear-gradient(135deg, #8b5cf6, #6d28d9);
+        }
+
+        .icon-yellow {
+            background: linear-gradient(135deg, #f59e0b, #b45309);
+        }
+
+        .stat-info h3 {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 0.25rem;
+        }
+
+        .stat-info p {
+            font-size: 2rem;
+            font-weight: 800;
+            color: var(--text);
+            line-height: 1;
+        }
+
+        /* Charts Section */
+        .charts-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .chart-card {
+            background: var(--surface);
+            backdrop-filter: blur(8px);
+            border: 1px solid var(--glass-border);
+            border-radius: var(--radius-lg);
+            padding: 1.5rem;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .chart-card h3 {
+            margin-bottom: 1.5rem;
+            font-size: 1.25rem;
+            color: var(--text);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .chart-container {
+            position: relative;
+            height: 300px;
+            width: 100%;
+        }
+
+        /* Learn & Earn Section */
+        .earn-banner {
+            background: linear-gradient(135deg, #0f172a, #1e293b);
+            border-radius: var(--radius-xl);
+            padding: 2.5rem;
+            color: white;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
+        }
+
+        .earn-banner::after {
+            content: "💰";
+            position: absolute;
+            right: -20px;
+            bottom: -30px;
+            font-size: 12rem;
+            opacity: 0.05;
+            transform: rotate(-15deg);
+        }
+
+        .earn-content {
+            z-index: 1;
+        }
+
+        .earn-content h2 {
+            font-size: 2.5rem;
+            font-weight: 800;
+            background: linear-gradient(to right, #fcd34d, #f59e0b);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 0.5rem;
+        }
+
+        .earn-content p {
+            font-size: 1.1rem;
+            color: #cbd5e1;
+            max-width: 500px;
+            margin-bottom: 2rem;
+        }
+
+        .earnings-display {
+            display: flex;
+            gap: 2rem;
+            align-items: center;
+            z-index: 1;
+        }
+
+        .earnings-box {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: var(--radius-lg);
+            padding: 1.5rem 2rem;
+            text-align: center;
+            min-width: 200px;
+        }
+
+        .earnings-box span {
+            display: block;
+            text-transform: uppercase;
+            font-size: 0.8rem;
+            letter-spacing: 1px;
+            color: #94a3b8;
+            margin-bottom: 0.5rem;
+        }
+
+        .earnings-box strong {
+            display: block;
+            font-size: 2.5rem;
+            font-weight: 800;
+            color: #10b981;
+        }
+
+        /* Badges Section */
+        .badges-container {
+            background: var(--surface);
+            backdrop-filter: blur(8px);
+            border: 1px solid var(--glass-border);
+            border-radius: var(--radius-lg);
+            padding: 2rem;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .badges-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1.5rem;
+            margin-top: 1.5rem;
+        }
+
+        .badge-card {
+            width: 120px;
+            text-align: center;
+            opacity: 0.4;
+            filter: grayscale(1);
+            transition: all 0.3s ease;
+        }
+
+        .badge-card.earned {
+            opacity: 1;
+            filter: grayscale(0);
+        }
+
+        .badge-card.earned:hover {
+            transform: scale(1.1);
+        }
+
+        .badge-icon {
+            width: 80px;
+            height: 80px;
+            background: linear-gradient(135deg, #fcd34d, #f59e0b);
+            border-radius: 50%;
+            margin: 0 auto 0.75rem auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            color: white;
+            box-shadow: 0 4px 10px rgba(245, 158, 11, 0.3);
+            border: 4px solid white;
+        }
+
+        .badge-card h4 {
+            font-size: 0.85rem;
+            color: var(--text);
+            font-weight: 700;
+        }
+
+        @media (max-width: 1024px) {
+            .earn-banner {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 2rem;
+            }
+
+            .earnings-display {
+                width: 100%;
+                flex-direction: column;
+            }
+
+            .earnings-box {
+                width: 100%;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .charts-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <div class="header-content">
+            <div class="left-section">
+                <div class="logo-area" onclick="window.location.href='index.html'">
+                    <i class="fa-solid fa-chart-pie"></i>
+                    <span>Analytics</span>
+                </div>
+            </div>
+            <div class="nav-actions">
+                <a href="index.html" class="btn-secondary" style="text-decoration: none;">
+                    <i class="fas fa-arrow-left"></i> Dashboard
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <div class="container">
+        <main class="analytics-container">
+
+            <div class="earn-banner">
+                <div class="earn-content">
+                    <h2>Learn & Earn</h2>
+                    <p>Turn your educational progress into real rewards! As you complete lessons, you earn
+                        Credits.</p>
+                    <p
+                        style="font-size: 0.9rem; color: #fbbf24; font-weight: 500; margin-top: -1rem; margin-bottom: 2rem;">
+                        <i class="fas fa-info-circle"></i> Note: Spend at least 1 hours on Aidube to see the changes
+                        in your credits.
+                    </p>
+                    <button id="redeemBtn" class="btn-primary">Redeem
+                        Earnings</button>
+                </div>
+                <div class="earnings-display">
+                    <div class="earnings-box"
+                        style="background: rgba(16, 185, 129, 0.1); border-color: rgba(16, 185, 129, 0.3);">
+                        <span>Estimated Earnings</span>
+                        <strong id="estimatedEarnings">$0.00</strong>
+                    </div>
+                </div>
+            </div>
+
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-icon icon-blue"><i class="fas fa-coins"></i></div>
+                    <div class="stat-info">
+                        <h3>Total Credits</h3>
+                        <p id="totalCredits">0</p>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon icon-green"><i class="fas fa-video"></i></div>
+                    <div class="stat-info">
+                        <h3>Videos Watched</h3>
+                        <p id="videosWatched">0</p>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon icon-purple"><i class="fas fa-clipboard-check"></i></div>
+                    <div class="stat-info">
+                        <h3>Tests Taken</h3>
+                        <p id="testsTaken">0</p>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon icon-yellow"><i class="fas fa-medal"></i></div>
+                    <div class="stat-info">
+                        <h3>Avg. Test Score</h3>
+                        <p id="avgScore">0%</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="charts-grid">
+                <div class="chart-card">
+                    <h3><i class="fas fa-chart-line"></i> Learning Activity</h3>
+                    <div class="chart-container">
+                        <canvas id="activityChart"></canvas>
+                    </div>
+                </div>
+                <div class="chart-card">
+                    <h3><i class="fas fa-star"></i> Test Performance</h3>
+                    <div class="chart-container">
+                        <canvas id="performanceChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <div class="badges-container">
+                <h3 style="font-size: 1.5rem; margin-bottom: 0.5rem;"><i class="fas fa-award"></i> Your Achievements
+                </h3>
+                <p style="color: var(--text-muted);">Unlock badges as you learn. Hover over a badge to see requirements.
+                </p>
+                <div class="badges-grid" id="badgesGrid">
+                    <!-- Badges injected by JS -->
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <script type="module" src="js/analytics.js"></script>
+</body>
+
+</html>

@@ -1,6 +1,7 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
-import { auth } from "./firebase.js";
-import { getGeminiApiKey, rotateGeminiKey, retryOperation, showNotification, checkQuota, incrementQuota, sanitizeHTML } from "./utils.js";
+import { auth, db } from "./firebase.js";
+import { doc, setDoc } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-firestore.js";
+import { getGeminiApiKey, rotateGeminiKey, retryOperation, showNotification, checkQuota, incrementQuota, sanitizeHTML, awardCredits } from "./utils.js";
 
 const urlParams = new URLSearchParams(window.location.search);
 const videoId = urlParams.get('videoId');
@@ -166,6 +167,15 @@ function submitTest() {
   }
 
   showNotification(`You scored ${score} out of ${correctAnswers.length} !`, "success");
+
+  // Save to analytics in Firebase
+  const user = auth.currentUser;
+  if (user) {
+    try {
+      const docRef = doc(db, "users", user.uid, "testScores", `${videoId}_${Date.now()}`);
+      setDoc(docRef, { videoId, score, total: correctAnswers.length, date: Date.now() }, { merge: true });
+    } catch (e) { console.error(e); }
+  }
 }
 
 window.generateTest = generateTest;

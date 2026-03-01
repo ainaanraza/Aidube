@@ -1,6 +1,6 @@
 import { auth, db } from "./firebase.js";
-import { setDoc, doc, getDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-firestore.js";
-import { getYouTubeApiKey, rotateYouTubeKey, isValidPlaylistId, retryOperation, getGeminiApiKey, rotateGeminiKey, showNotification, checkQuota, incrementQuota, sanitizeHTML } from "./utils.js";
+import { setDoc, doc, getDoc, deleteDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-firestore.js";
+import { getYouTubeApiKey, rotateYouTubeKey, isValidPlaylistId, retryOperation, getGeminiApiKey, rotateGeminiKey, showNotification, checkQuota, incrementQuota, sanitizeHTML, trackVideoCompletion, awardCredits } from "./utils.js";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
 
@@ -10,6 +10,14 @@ const lastVideoId = urlParams.get('videoId');
 
 const videoPlayer = document.getElementById("videoPlayer");
 const videoList = document.getElementById("videoList");
+
+// Load YouTube Iframe API
+const tag = document.createElement('script');
+tag.src = "https://www.youtube.com/iframe_api";
+const firstScriptTag = document.getElementsByTagName('script')[0];
+firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+
+let ytPlayer;
 
 // Current playlist title state
 let currentPlaylistTitle = "Unknown Playlist";
@@ -108,16 +116,7 @@ function displayVideos(videos) {
 }
 
 async function playVideo(videoId, videoTitle) {
-  videoPlayer.innerHTML = `
-    <iframe 
-      width="100%" 
-      height="100%" 
-      src="https://www.youtube-nocookie.com/embed/${videoId}?rel=0&showinfo=0" 
-      frameborder="0" 
-      allow="encrypted-media" 
-      allowfullscreen>
-    </iframe>
-  `;
+  videoPlayer.innerHTML = `<div id="yt-player-container"></div>`;
 
   // Save to last played
   localStorage.setItem("lastPlayedVideo", JSON.stringify({
@@ -126,11 +125,56 @@ async function playVideo(videoId, videoTitle) {
     title: videoTitle
   }));
 
+  // Initialize or load video into existing player
+  const initPlayer = () => {
+    if (ytPlayer) {
+      ytPlayer.destroy();
+    }
+    ytPlayer = new window.YT.Player('yt-player-container', {
+      height: '100%',
+      width: '100%',
+      videoId: videoId,
+      playerVars: { 'rel': 0, 'showinfo': 0 },
+      events: {
+        'onStateChange': async (event) => {
+          if (event.data === window.YT.PlayerState.ENDED) {
+            await trackVideoCompletion(videoId, videoTitle, playlistId);
+
+            // Check playlist completion via Firebase
+            const user = auth.currentUser;
+            if (user) {
+              const videosSnapshot = await getDocs(collection(db, "users", user.uid, "completedVideos"));
+              const completed = videosSnapshot.docs.map(doc => doc.data());
+              const completedInPlaylist = completed.filter(v => v.playlistId === playlistId).length;
+
+              const totalVideosElements = document.querySelectorAll('.video-item');
+              if (totalVideosElements.length > 0 && completedInPlaylist >= totalVideosElements.length) {
+                const docRef = doc(db, "users", user.uid, "completedPlaylists", playlistId);
+                const docSnap = await getDoc(docRef);
+                if (!docSnap.exists()) {
+                  await setDoc(docRef, { completedAt: Date.now(), playlistId }, { merge: true });
+                  showNotification("Course Completed! Badge Earned!", "success");
+                }
+              }
+            }
+          }
+        }
+      }
+    });
+  };
+
+  if (window.YT && window.YT.Player) {
+    initPlayer();
+  } else {
+    // API not ready yet, queue it. 
+    // The standard callback is onYouTubeIframeAPIReady, but if multiple videos are clicked fast, handle safely:
+    window.onYouTubeIframeAPIReady = initPlayer;
+  }
+
   // Save to cloud history
   try {
     const user = auth.currentUser;
     if (user) {
-      // Skip saving individual videos to history
       if (videoId.length > 11 && (videoId.startsWith("PL") || videoId.startsWith("UU") || videoId.startsWith("FL"))) {
         await setDoc(doc(db, "users", user.uid, "history", videoId), {
           title: videoTitle,
@@ -141,10 +185,7 @@ async function playVideo(videoId, videoTitle) {
         }, { merge: true });
       }
     }
-
-  } catch (e) {
-    // Cloud history write failed
-  }
+  } catch (e) { }
 }
 
 // Add CSS for error message

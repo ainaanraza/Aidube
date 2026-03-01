@@ -151,7 +151,8 @@ button,
 .btn-primary,
 .btn-secondary,
 .btn-ghost,
-.btn-resource {
+.btn-resource,
+.btn-golden {
   font-family: inherit;
   font-weight: 700;
   padding: 0.75rem 1.5rem;
@@ -172,7 +173,8 @@ button i,
 .btn-primary i,
 .btn-secondary i,
 .btn-ghost i,
-.btn-resource i {
+.btn-resource i,
+.btn-golden i {
   font-size: 1.1em;
 }
 
@@ -223,6 +225,18 @@ button i,
   border-color: rgba(37, 99, 235, 0.3);
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(37, 99, 235, 0.1);
+}
+
+.btn-golden {
+  background: #fffbeb;
+  color: #d97706 !important;
+  border: 1px solid #fbbf24;
+  box-shadow: var(--shadow-sm);
+}
+
+.btn-golden:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.15);
 }
 
 /* Layout Container */
@@ -885,6 +899,27 @@ button i,
   .history-item {
     flex-direction: column;
     gap: 1rem;
+  }
+
+  /* AdSense Safeguards 
+   These rules ensure that when Google Auto Ads injects elements into the page, 
+   they don't overlap the glassmorphism layout, cause horizontal scrollbars, 
+   or look completely out of place. 
+*/
+  ins.adsbygoogle {
+    background: transparent !important;
+    display: block;
+    margin: 1.5rem auto;
+    max-width: 100%;
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    box-shadow: var(--shadow-sm);
+    text-align: center;
+  }
+
+  /* Ensure injected ad iframes don't overflow mobile screens */
+  ins.adsbygoogle iframe {
+    max-width: 100% !important;
   }
 
   .history-thumb-wrapper {
