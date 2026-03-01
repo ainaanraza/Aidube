@@ -13,14 +13,9 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # Fallback pool of API keys to prevent Quota Exhaustion limits
-GEMINI_API_KEYS = [
-    os.getenv("GEMINI_API_KEY"), # Try primary env key first
-    "AIzaSyCxmH2scV8KDS3TTKju8YnRSQdsOjmbyMI",
-    "AIzaSyAXh5mE52qyJuIyv8QjMpx6CRWQb363wZ0",
-    "AIzaSyDzmaqaK8K-VQrdlfA2L8j3af6wZ06HH4w",
-    "AIzaSyAcaoCV_IhsD61HrYWewecC0Mpeys0LrbE",
-    "AIzaSyCokZX00LfxiJ6XSukz2Ajd9T6Zk-N_USo"
-]
+env_keys_str = os.getenv("GEMINI_API_KEYS", os.getenv("GEMINI_API_KEY", ""))
+GEMINI_API_KEYS = [k.strip() for k in env_keys_str.split(",") if k.strip()]
+
 # Filter out None and remove duplicates while preserving order
 GEMINI_API_KEYS = list(dict.fromkeys(k for k in GEMINI_API_KEYS if k))
 
@@ -34,16 +29,20 @@ def run_research_agent(topic):
     prompt = f"""
     You are an expert AI educational assistant researching the topic: "{topic}".
     Use your Google Search tool to find educational websites with text knowledge about this topic (like coding sites, tutorials, explanations, etc.).
-    CRITICAL: Do not use Wikipedia, peer-reviewed academic papers, or journals. Provide resources from general web educational sources.
+    
+    CRITICAL INSTRUCTIONS:
+    1. Do not use Wikipedia, peer-reviewed academic papers, or journals. Provide resources from general web educational sources.
+    2. For any URL you provide, you MUST provide the FULL, TRUE, DIRECT URL (e.g. https://www.example.com/page). 
+    3. NEVER use relative URLs like /grounding-api-redirect/...
     
     You must return your entire response as a single valid JSON object. Do not include markdown formatting like ```json or anything else outside the JSON object.
     Follow this strict JSON structure:
     {{
-        "summary": "Your detailed summary including headings and bold text formatted in markdown. Make sure to clearly outline the main concepts and provide a balanced overview. Use STRICT and CLEAN Markdown.",
+        "summary": "Your detailed summary including headings and bold text formatted in markdown. Make sure to clearly outline the main concepts and provide a balanced overview. Use STRICT and CLEAN Markdown. DO NOT include relative grounding redirect links in the text.",
         "resources": [
             {{
                 "title": "Site Title",
-                "url": "https://original-url.com/...",
+                "url": "https://www.original-authoritative-url.com/exact-page",
                 "snippet": "Short description of the resource."
             }}
         ]
@@ -91,6 +90,11 @@ def run_research_agent(topic):
         # Clean up possible markdown code blocks around json
         raw_text = re.sub(r'```json\n?', '', raw_text)
         raw_text = re.sub(r'```\n?', '', raw_text)
+        
+        # Fallback safeguard: if Gemini still returns relative grounding-api-redirect URLs, 
+        # prepend the domain so it actually resolves correctly.
+        raw_text = re.sub(r'(["\']|\[.*?\]\()/grounding-api-redirect/', r'\1https://www.google.com/search/grounding-api-redirect/', raw_text)
+        
         raw_text = raw_text.strip()
         
         try:

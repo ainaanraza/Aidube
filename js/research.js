@@ -1,4 +1,6 @@
 // js/research.js
+import { GoogleGenerativeAI } from "https://cdn.jsdelivr.net/npm/@google/generative-ai/+esm";
+import { getGeminiApiKey, rotateGeminiKey } from "./utils.js";
 
 document.addEventListener("DOMContentLoaded", () => {
     const params = new URLSearchParams(window.location.search);
@@ -36,20 +38,26 @@ document.addEventListener("DOMContentLoaded", () => {
                 ? 'http://localhost:5000/api/research'
                 : '/api/research'; // For Vercel/Prod rewrites
 
-            const response = await fetch(apiUrl, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify({ topic: searchTopic })
-            });
+            let data;
+            try {
+                const response = await fetch(apiUrl, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({ topic: searchTopic })
+                });
 
-            if (!response.ok) {
-                const errData = await response.json().catch(() => ({}));
-                throw new Error(errData.error || `Server responded with ${response.status}`);
+                if (!response.ok) {
+                    const errData = await response.json().catch(() => ({}));
+                    throw new Error(errData.error || `Server responded with ${response.status}`);
+                }
+
+                data = await response.json();
+            } catch (serverError) {
+                console.warn("Server API failed, using fallback:", serverError.message);
+                data = await fallbackResearch(searchTopic);
             }
-
-            const data = await response.json();
 
             // Render the results
             renderResults(data);
@@ -58,6 +66,41 @@ document.addEventListener("DOMContentLoaded", () => {
             console.error("Research Error:", error);
             showError("Failed to generate research: " + error.message);
         }
+    }
+
+    async function fallbackResearch(searchTopic) {
+        let lastError = null;
+        for (let i = 0; i < 5; i++) {
+            try {
+                const genAI = new GoogleGenerativeAI(getGeminiApiKey());
+                const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+
+                const prompt = `You are an AI research assistant. Provide a comprehensive educational summary about "${searchTopic}". 
+Respond ONLY with a valid JSON document containing two keys:
+1. "summary": A detailed markdown formatted text with headers, bullet points, and explanations. DO NOT use /grounding-api-redirect/ links.
+2. "resources": An array of objects, each containing "title", "url" (CRITICAL: use absolute, direct, real URLs starting with https://; NEVER use relative or /grounding-api-redirect/ paths), and "snippet". Provide at least 3 resources.`;
+
+                const result = await model.generateContent(prompt);
+                let text = await result.response.text();
+
+                // Fallback safeguard: if Gemini still returns relative grounding-api-redirect URLs
+                text = text.replace(/(["']|\[.*?\]\()\/grounding-api-redirect\//g, '$1https://www.google.com/search/grounding-api-redirect/');
+
+                if (text.startsWith("```json")) {
+                    text = text.replace(/^```json\s*/, "").replace(/\s*```$/, "");
+                } else if (text.startsWith("```")) {
+                    text = text.replace(/^```\s*/, "").replace(/\s*```$/, "");
+                }
+
+                const data = JSON.parse(text);
+                return data;
+            } catch (err) {
+                lastError = err;
+                console.warn(`Fallback attempt ${i + 1} failed:`, err);
+                rotateGeminiKey();
+            }
+        }
+        throw new Error("All fallback Gemini API keys failed or quota exceeded.");
     }
 
     function renderResults(data) {
