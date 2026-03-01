@@ -3,3 +3,6 @@ flask-cors
 youtube-transcript-api
 gunicorn
 requests
+google-genai
+beautifulsoup4
+python-dotenv

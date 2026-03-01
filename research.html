@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aidube | AI Research</title>
+    <meta name="description"
+        content="Research any topic instantly with Aidube AI. Get structured, cited, and easy-to-read educational summaries.">
+
+    <!-- Favicon -->
+    <link rel="icon" href="aidube_logo2.png" type="image/png">
+    <script type="module">
+        import { inject } from 'https://cdn.jsdelivr.net/npm/@vercel/analytics/+esm';
+        inject();
+    </script>
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="css/toast.css">
+    <!-- Load base layout CSS and then specific research CSS -->
+    <link rel="stylesheet" href="css/roadmap.css">
+    <link rel="stylesheet" href="css/research.css">
+
+    <!-- Marked.js for Markdown parsing -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+</head>
+
+<body>
+    <header>
+        <div class="header-content">
+            <h1><i class="fas fa-wand-magic-sparkles"></i> AI Research Engine</h1>
+            <a href="index.html" class="back-button">
+                <i class="fas fa-arrow-left"></i>
+                <span>Dashboard</span>
+            </a>
+        </div>
+    </header>
+
+    <div class="container animate__animated animate__fadeIn">
+
+        <div class="research-header">
+            <h2>Research Topic: <span id="topicTitle">Loading...</span></h2>
+            <p>Our AI is scouring the web and synthesizing the best info for you.</p>
+        </div>
+
+        <div class="research-container">
+
+            <!-- Loading State -->
+            <div id="loadingState" class="loading-state">
+                <div class="spinner">
+                    <div class="double-bounce1"></div>
+                    <div class="double-bounce2"></div>
+                </div>
+                <h3>Synthesizing Web Content...</h3>
+                <p>This may take up to 20 seconds. Please wait.</p>
+            </div>
+
+            <!-- Error State -->
+            <div id="errorState" class="error-state" style="display: none;">
+                <i class="fas fa-exclamation-triangle fa-3x" style="color: #ef4444; margin-bottom: 1rem;"></i>
+                <h3>Research Failed</h3>
+                <p id="errorMsg">Something went wrong while fetching the research data.</p>
+                <button class="btn-primary" onclick="window.location.reload()" style="margin-top: 1.5rem;">Try
+                    Again</button>
+            </div>
+
+            <!-- Result State -->
+            <div id="resultState" style="display: none;">
+
+                <!-- Markdown Content gets injected here -->
+                <div id="markdownContent" class="markdown-body"></div>
+
+                <div class="sources-section">
+                    <h3><i class="fas fa-link"></i> External Resources</h3>
+                    <div id="resourcesContainer" class="resources-list">
+                        <!-- Resource cards injected here -->
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Note: reuse toast logic from utils if needed -->
+    <script type="module" src="js/research.js"></script>
+</body>
+
+</html>

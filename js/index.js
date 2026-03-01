@@ -83,6 +83,15 @@ function redirectToRoadmap() {
   }
 }
 
+function redirectToResearch() {
+  const query = document.getElementById("searchInput").value;
+  if (query) {
+    window.location.href = `research.html?topic=${encodeURIComponent(query)}`;
+  } else {
+    showNotification("Please enter a topic to research.", "warning");
+  }
+}
+
 function renderLastPlayed() {
   const container = document.getElementById("lastPlayedContainer");
   if (!container) return;
@@ -763,6 +772,7 @@ window.clearAllLectureHistory = clearAllLectureHistory;
 window.updateLectureHistory = updateLectureHistory;
 window.fetchPlaylists = fetchPlaylists;
 window.redirectToRoadmap = redirectToRoadmap;
+window.redirectToResearch = redirectToResearch;
 window.clearAllSavedPlaylists = clearAllSavedPlaylists;
 window.toggleSidebar = toggleSidebar;
 window.updateLectureHistory = updateLectureHistory;
