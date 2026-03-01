@@ -88,7 +88,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     <h4>${resource.title}</h4>
                     <p>${resource.snippet}</p>
                     <div class="resource-url">
-                        <i class="fas fa-external-link-alt"></i> ${resource.url}
+                        <i class="fas fa-external-link-alt"></i> Open Link
                     </div>
                 `;
                 resourcesContainer.appendChild(card);

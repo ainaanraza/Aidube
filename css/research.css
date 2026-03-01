@@ -274,3 +274,92 @@
     color: var(--primary-light);
     opacity: 1;
 }
+
+/* =========================================
+   Responsive Adjustments for Mobile UI 
+   ========================================= */
+@media (max-width: 768px) {
+    .container {
+        padding: 0 1rem;
+        margin: 1.5rem auto;
+    }
+
+    header .header-content {
+        padding: 0 1rem;
+    }
+
+    header .header-content h1 {
+        font-size: 1.25rem;
+    }
+
+    .back-button {
+        padding: 0.5rem 1rem;
+    }
+
+    .research-container {
+        padding: 1.5rem;
+        margin-top: 1rem;
+        border-radius: 16px;
+    }
+
+    .research-header {
+        margin-bottom: 1.5rem;
+    }
+
+    .research-header h2 {
+        font-size: 1.6rem;
+    }
+
+    .research-header p {
+        font-size: 0.95rem;
+    }
+
+    .markdown-body {
+        font-size: 1rem;
+    }
+
+    .markdown-body h1 {
+        font-size: 1.6rem;
+    }
+
+    .markdown-body h2 {
+        font-size: 1.4rem;
+    }
+
+    .markdown-body h3 {
+        font-size: 1.2rem;
+    }
+
+    .markdown-body pre {
+        padding: 1rem;
+        border-radius: 8px;
+    }
+
+    .markdown-body table {
+        display: block;
+        overflow-x: auto;
+        white-space: nowrap;
+    }
+
+    .resources-list {
+        grid-template-columns: 1fr;
+    }
+
+    .loading-state {
+        height: 200px;
+    }
+}
+
+@media (max-width: 480px) {
+    header .header-content h1 {
+        font-size: 1.1rem;
+    }
+
+    .back-button span {
+        display: none;
+    }
+
+    .back-button {
+        padding: 0.4rem 0.7rem;
+    }
+}
