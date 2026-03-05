@@ -50,7 +50,9 @@ async function loadPlaylist(pageToken = "") {
       return;
     }
 
-    displayVideos(data.items);
+    const isFirstPage = pageToken === "";
+    const totalResults = data.pageInfo ? data.pageInfo.totalResults : null;
+    displayVideos(data.items, isFirstPage, totalResults);
 
     if (data.nextPageToken) {
       await loadPlaylist(data.nextPageToken);
@@ -71,12 +73,25 @@ async function loadPlaylist(pageToken = "") {
   }
 }
 
-function displayVideos(videos) {
-  videoList.innerHTML = ""; // Clear existing
+let currentVideoIndex = 0;
+
+function displayVideos(videos, isFirstPage = true, totalResults = null) {
+  if (isFirstPage) {
+    videoList.innerHTML = ""; // Clear existing
+    currentVideoIndex = 0;
+  }
+
   const countElement = document.getElementById("videoCount");
-  if (countElement) countElement.textContent = `${videos.length} Professional Lessons`;
+  if (countElement) {
+    if (totalResults !== null) {
+      countElement.textContent = `${totalResults} Professional Lessons`;
+    } else if (isFirstPage) {
+      countElement.textContent = `${videos.length} Professional Lessons`;
+    }
+  }
 
   videos.forEach((video, index) => {
+    currentVideoIndex++;
     const videoId = video.snippet.resourceId.videoId;
     const videoTitle = video.snippet.title;
     const thumbnailUrl = video.snippet.thumbnails.medium?.url || video.snippet.thumbnails.default?.url || `https://i.ytimg.com/vi/${videoId}/mqdefault.jpg`;
@@ -91,7 +106,7 @@ function displayVideos(videos) {
       <div class="video-info">
         <div class="video-title">${sanitizeHTML(videoTitle)}</div>
         <div style="font-size: 0.7rem; color: var(--text-muted); margin-top: 0.25rem;">
-          <i class="fas fa-play-circle"></i> Lesson ${index + 1}
+          <i class="fas fa-play-circle"></i> Lesson ${currentVideoIndex}
         </div>
       </div>
     `;
@@ -102,7 +117,7 @@ function displayVideos(videos) {
     };
     videoList.appendChild(videoItem);
 
-    if (index === 0 && !lastVideoId) {
+    if (isFirstPage && index === 0 && !lastVideoId) {
       playVideo(videoId, videoTitle);
       videoItem.classList.add("active");
     }
