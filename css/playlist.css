@@ -382,4 +382,16 @@ header {
   .header-content h1 {
     font-size: 1.1rem !important;
   }
+  
+  /* Native Ad Responsiveness for Mobile */
+  .ad-container-native {
+    margin: 1rem 0 !important;
+    padding: 0.5rem !important;
+    width: 100% !important;
+    box-sizing: border-box;
+  }
+  
+  .ad-container-native iframe.native-ad-iframe {
+    max-width: 100% !important;
+  }
 }

@@ -965,6 +965,18 @@ button i,
     max-width: 100% !important;
   }
 
+  /* Native Ad Responsiveness for Mobile */
+  .ad-container-native {
+    margin: 1rem 0 !important;
+    padding: 0.5rem !important;
+    width: 100% !important;
+    box-sizing: border-box;
+  }
+  
+  .ad-container-native iframe.native-ad-iframe {
+    max-width: 100% !important;
+  }
+
   .history-thumb-wrapper {
     width: 100% !important;
     aspect-ratio: 16/9;
