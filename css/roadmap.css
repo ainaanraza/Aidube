@@ -273,4 +273,8 @@ button,
   .roadmap-item {
     padding: 1.5rem;
   }
+
+  .back-button span {
+    display: none;
+  }
 }

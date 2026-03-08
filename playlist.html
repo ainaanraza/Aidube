@@ -52,6 +52,13 @@
 
   <main class="main-content">
     <section class="video-section">
+      <!-- Course Title and Introduction -->
+      <div class="course-header" style="margin-bottom: 1.5rem;">
+        <h1 id="courseTitle" style="font-size: 1.75rem; font-weight: 800; color: var(--text); margin-bottom: 0.5rem; line-height: 1.2;">Course Loading...</h1>
+        <div id="courseIntro" class="course-intro" style="color: var(--text-muted); font-size: 0.95rem; line-height: 1.6;">Preparing your educational content...</div>
+      </div>
+
+      <!-- Embedded YouTube Video -->
       <div class="video-player" id="videoPlayer">
         <div class="loading">
           <div class="spinner"
@@ -68,27 +75,58 @@
         </div>
       </div>
 
-      <div class="video-actions">
-        <div class="action-group">
-          <h3>Study Intelligence</h3>
-          <div class="action-buttons">
-            <button id="notesBtn" class="action-btn">
-              <i class="fas fa-magic"></i> Generate Notes
+      <!-- AI Tools Section -->
+      <div class="video-actions" style="margin-top: 2rem; margin-bottom: 2rem;">
+        <div class="action-group" style="grid-column: 1 / -1;">
+          <h3 style="font-size: 1.1rem; color: var(--text); margin-bottom: 1rem;"><i class="fas fa-robot"></i> AI Tools</h3>
+          <div class="action-buttons" style="display: flex; gap: 1rem; flex-wrap: wrap;">
+            <button id="askAiBtn" class="action-btn" style="flex: 1; min-width: 150px;">
+              <i class="fas fa-comment-dots"></i> Ask Aidube
             </button>
-            <button id="summaryBtn" class="action-btn">
-              <i class="fas fa-bolt"></i> Quick Summary
+            <button id="notesBtn" class="action-btn" style="flex: 1; min-width: 150px;">
+              <i class="fas fa-magic"></i> Generate Notes PDF
             </button>
+            <button id="summaryBtn" class="action-btn" style="flex: 1; min-width: 150px;">
+              <i class="fas fa-bolt"></i> Quick Summary PDF
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Course Content Sections -->
+      <div class="course-content-tabs">
+        
+        <div class="content-section" id="section-quiz" style="margin-bottom: 2rem; background: var(--surface); padding: 1.5rem; border-radius: var(--radius); border: 1px solid var(--border);">
+          <h3 style="font-size: 1.25rem; font-weight: 700; border-bottom: 2px solid var(--bg); padding-bottom: 0.5rem; margin-bottom: 1rem; color: var(--primary-dark);">Practice Test</h3>
+          <div id="quizContent" style="color: var(--text); line-height: 1.6; margin-bottom: 1.5rem; font-size: 0.95rem;">
+            <p>Ready to test your knowledge on this topic?</p>
+          </div>
+          <button id="testBtn" class="action-btn test-btn" style="width: auto; padding: 0.75rem 1.5rem; display: inline-flex;">
+            <i class="fas fa-graduation-cap"></i> Generate Practice Test
+          </button>
+        </div>
+
+        <div class="content-section" id="section-summary" style="margin-bottom: 2rem; background: var(--surface); padding: 1.5rem; border-radius: var(--radius); border: 1px solid var(--border);">
+          <h3 style="font-size: 1.25rem; font-weight: 700; border-bottom: 2px solid var(--bg); padding-bottom: 0.5rem; margin-bottom: 1rem; color: var(--primary-dark);">Article</h3>
+          <div id="lessonSummaryContent" style="color: var(--text); line-height: 1.6; font-size: 0.95rem;">
+            <p>Article will be generated here.</p>
           </div>
         </div>
 
-        <div class="action-group">
-          <h3>Knowledge Check</h3>
-          <div class="action-buttons">
-            <button id="testBtn" class="action-btn test-btn">
-              <i class="fas fa-graduation-cap"></i> Practice Test
-            </button>
+        <div class="content-section" id="section-concepts" style="margin-bottom: 2rem; background: var(--surface); padding: 1.5rem; border-radius: var(--radius); border: 1px solid var(--border);">
+          <h3 style="font-size: 1.25rem; font-weight: 700; border-bottom: 2px solid var(--bg); padding-bottom: 0.5rem; margin-bottom: 1rem; color: var(--primary-dark);">Key Concepts</h3>
+          <div id="keyConceptsContent" style="color: var(--text); line-height: 1.6; font-size: 0.95rem;">
+            <p>Important keywords and concepts will be extracted here.</p>
           </div>
         </div>
+
+        <div class="content-section" id="section-notes" style="margin-bottom: 2rem; background: var(--surface); padding: 1.5rem; border-radius: var(--radius); border: 1px solid var(--border);">
+          <h3 style="font-size: 1.25rem; font-weight: 700; border-bottom: 2px solid var(--bg); padding-bottom: 0.5rem; margin-bottom: 1rem; color: var(--primary-dark);">Notes / Explanation</h3>
+          <div id="notesContent" style="color: var(--text); line-height: 1.6; font-size: 0.95rem;">
+            <p>Detailed notes for this lesson will appear here.</p>
+          </div>
+        </div>
+
       </div>
     </section>
 
