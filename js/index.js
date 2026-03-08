@@ -202,7 +202,7 @@ function renderPlaylistItems(playlists) {
 }
 
 
-async function fetchPlaylists(customQuery = null, isRandom = false) {
+async function fetchPlaylists(customQuery = null, isRandom = false, isFromLoad = false) {
   const searchInput = document.getElementById("searchInput");
   let searchQuery = searchInput?.value || "";
 
@@ -212,7 +212,7 @@ async function fetchPlaylists(customQuery = null, isRandom = false) {
 
   if (!searchQuery.trim()) return;
 
-  if (!isRandom) {
+  if (!isRandom && !isFromLoad) {
     // Hide Resume section on manual search so results are visible immediately
     const lastPlayedContainer = document.getElementById("lastPlayedContainer");
     if (lastPlayedContainer) {
@@ -522,16 +522,12 @@ if (!activeQuery) {
     try {
       const savedResults = JSON.parse(localStorage.getItem("lastSearchResults"));
       if (savedResults && savedResults.length > 0) {
-        // We still need to hide the last played banner on a manual search render
-        const lastPlayedContainer = document.getElementById("lastPlayedContainer");
-        if (lastPlayedContainer) lastPlayedContainer.style.display = "none";
-        
         setTimeout(() => renderPlaylists(savedResults), 100);
       } else {
-        setTimeout(() => fetchPlaylists(savedQuery), 100);
+        setTimeout(() => fetchPlaylists(savedQuery, false, true), 100);
       }
     } catch(e) {
-      setTimeout(() => fetchPlaylists(savedQuery), 100);
+      setTimeout(() => fetchPlaylists(savedQuery, false, true), 100);
     }
   } else {
     // If absolutely no history, load a random topic
