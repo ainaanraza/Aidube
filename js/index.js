@@ -213,10 +213,14 @@ async function fetchPlaylists(customQuery = null, isRandom = false, isFromLoad =
   if (!searchQuery.trim()) return;
 
   if (!isRandom && !isFromLoad) {
-    // Hide Resume section on manual search so results are visible immediately
+    // Hide Resume section and top ad on manual search so results are visible immediately
     const lastPlayedContainer = document.getElementById("lastPlayedContainer");
     if (lastPlayedContainer) {
       lastPlayedContainer.style.display = "none";
+    }
+    const topAd = document.getElementById("topMainAd");
+    if (topAd) {
+      topAd.style.display = "none";
     }
   }
 
@@ -254,6 +258,25 @@ async function fetchPlaylists(customQuery = null, isRandom = false, isFromLoad =
     }
 
     renderPlaylists(data.items);
+
+    // Update header and scroll to results on manual search
+    if (!isRandom && !isFromLoad) {
+      // Update the heading to show what was searched
+      const headerText = document.getElementById("playlistsHeaderText");
+      if (headerText) {
+        headerText.textContent = `Results for: ${searchQuery}`;
+      }
+
+      // Scroll to the playlists header so results are immediately visible
+      setTimeout(() => {
+        const playlistsHeader = document.querySelector(".playlists-header");
+        if (playlistsHeader) {
+          const headerHeight = document.querySelector('header')?.offsetHeight || 0;
+          const targetPosition = playlistsHeader.getBoundingClientRect().top + window.pageYOffset - headerHeight - 10;
+          window.scrollTo({ top: targetPosition, behavior: 'smooth' });
+        }
+      }, 150);
+    }
 
   } catch (error) {
     // Error fetching playlists
@@ -517,7 +540,7 @@ if (!activeQuery) {
     if (document.getElementById("searchInput")) {
       document.getElementById("searchInput").value = savedQuery;
     }
-    
+
     // Attempt to load the exact results from cache to avoid another API call instantly
     try {
       const savedResults = JSON.parse(localStorage.getItem("lastSearchResults"));
@@ -526,7 +549,7 @@ if (!activeQuery) {
       } else {
         setTimeout(() => fetchPlaylists(savedQuery, false, true), 100);
       }
-    } catch(e) {
+    } catch (e) {
       setTimeout(() => fetchPlaylists(savedQuery, false, true), 100);
     }
   } else {
