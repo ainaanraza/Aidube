@@ -167,11 +167,11 @@
     }
 
     .about-header h1 {
-        font-size: 1.75rem;
+        font-size: 1.35rem !important;
     }
 
     .about-header p {
-        font-size: 1rem;
+        font-size: 0.85rem !important;
     }
 
     .about-section {
@@ -179,11 +179,11 @@
     }
 
     .about-section h2 {
-        font-size: 1.25rem;
+        font-size: 1.15rem !important;
     }
 
     .about-content {
-        font-size: 0.95rem;
+        font-size: 0.85rem !important;
         line-height: 1.6;
     }
 
@@ -192,12 +192,20 @@
         gap: 1rem;
     }
 
+    .developer-info h3 {
+        font-size: 0.95rem !important;
+    }
+    
+    .developer-info p {
+        font-size: 0.8rem !important;
+    }
+
     .highlight-box {
         padding: 1rem;
-        font-size: 1rem;
+        font-size: 0.85rem !important;
     }
 
     .highlight-box p {
-        font-size: 1rem;
+        font-size: 0.85rem !important;
     }
 }

@@ -352,7 +352,31 @@
 
 @media (max-width: 480px) {
     header .header-content h1 {
-        font-size: 1.1rem;
+        font-size: 1.1rem !important;
+    }
+    
+    .research-header h2 {
+        font-size: 1.4rem !important;
+    }
+
+    .research-header p {
+        font-size: 0.85rem !important;
+    }
+
+    .markdown-body {
+        font-size: 0.85rem !important;
+    }
+
+    .markdown-body h1 {
+        font-size: 1.3rem !important;
+    }
+
+    .markdown-body h2 {
+        font-size: 1.1rem !important;
+    }
+
+    .markdown-body h3, .markdown-body h4 {
+        font-size: 1rem !important;
     }
 
     .back-button span {

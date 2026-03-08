@@ -351,4 +351,35 @@ header {
   .back-button span {
     display: none;
   }
+
+  /* Smaller typography for mobile */
+  .course-header h1, #courseTitle {
+    font-size: 1.15rem !important;
+  }
+  
+  .course-intro, #courseIntro, #descText {
+    font-size: 0.75rem !important;
+  }
+
+  .action-group h3, .content-section h3 {
+    font-size: 0.85rem !important;
+  }
+
+  .action-btn {
+    font-size: 0.75rem !important;
+    padding: 0.5rem !important;
+  }
+
+  .loading-state, .transcript-notes p, #quizContent p, #lessonSummaryContent p, #keyConceptsContent p, #notesContent p {
+    font-size: 0.75rem !important;
+  }
+
+  .concept-tag {
+    font-size: 0.65rem !important;
+    padding: 0.2rem 0.5rem !important;
+  }
+
+  .header-content h1 {
+    font-size: 1.1rem !important;
+  }
 }

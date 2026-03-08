@@ -510,11 +510,35 @@ async function clearAllRoadmaps() {
 
 
 const activeQuery = params.get("search");
+const savedQuery = localStorage.getItem("lastSearchQuery");
 
 if (!activeQuery) {
-  const educationTopics = ["Computer Science", "World History", "Quantum Physics", "Marine Biology", "Mathematics", "Art History", "Psychology", "Economics", "Philosophy", "Organic Chemistry", "Classic Literature", "Geography", "Music Theory", "Astronomy", "Sociology", "Data Science", "Graphic Design", "Machine Learning", "Artificial Intelligence", "Robotics", "Creative Writing", "Geology"];
-  const randomTopic = educationTopics[Math.floor(Math.random() * educationTopics.length)];
-  setTimeout(() => fetchPlaylists(randomTopic, true), 100);
+  if (savedQuery) {
+    if (document.getElementById("searchInput")) {
+      document.getElementById("searchInput").value = savedQuery;
+    }
+    
+    // Attempt to load the exact results from cache to avoid another API call instantly
+    try {
+      const savedResults = JSON.parse(localStorage.getItem("lastSearchResults"));
+      if (savedResults && savedResults.length > 0) {
+        // We still need to hide the last played banner on a manual search render
+        const lastPlayedContainer = document.getElementById("lastPlayedContainer");
+        if (lastPlayedContainer) lastPlayedContainer.style.display = "none";
+        
+        setTimeout(() => renderPlaylists(savedResults), 100);
+      } else {
+        setTimeout(() => fetchPlaylists(savedQuery), 100);
+      }
+    } catch(e) {
+      setTimeout(() => fetchPlaylists(savedQuery), 100);
+    }
+  } else {
+    // If absolutely no history, load a random topic
+    const educationTopics = ["Computer Science", "World History", "Quantum Physics", "Marine Biology", "Mathematics", "Art History", "Psychology", "Economics", "Philosophy", "Organic Chemistry", "Classic Literature", "Geography", "Music Theory", "Astronomy", "Sociology", "Data Science", "Graphic Design", "Machine Learning", "Artificial Intelligence", "Robotics", "Creative Writing", "Geology"];
+    const randomTopic = educationTopics[Math.floor(Math.random() * educationTopics.length)];
+    setTimeout(() => fetchPlaylists(randomTopic, true), 100);
+  }
 }
 
 

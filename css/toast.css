@@ -54,3 +54,17 @@
 .notification i {
     font-size: 1.1rem;
 }
+
+/* Mobile Typography */
+@media (max-width: 768px) {
+    .notification {
+        font-size: 0.8rem !important;
+        padding: 10px 15px;
+        right: 15px;
+        left: 15px; /* Center toast on small screens */
+        max-width: none;
+    }
+    .notification i {
+        font-size: 0.95rem;
+    }
+}

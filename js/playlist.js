@@ -376,7 +376,7 @@ async function populateLessonContent(videoId, videoTitle) {
     if (introEl) {
       if (ytData.description && ytData.description.trim() !== "") {
         introEl.innerHTML = `
-          <div id="descText" style="white-space: pre-wrap; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; font-size: 0.95rem; color: var(--text-muted); line-height: 1.6;">${sanitizeHTML(ytData.description)}</div>
+          <div id="descText" style="white-space: pre-wrap; word-break: break-word; overflow-wrap: break-word; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; font-size: 0.95rem; color: var(--text-muted); line-height: 1.6;">${sanitizeHTML(ytData.description)}</div>
           <a href="#" id="seeDescBtn" style="color: var(--primary); font-size: 0.85rem; text-decoration: none; display: inline-block; margin-top: 0.5rem; font-weight: 600;">See Description</a>
         `;
         const seeDescBtn = document.getElementById('seeDescBtn');
