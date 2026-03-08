@@ -2,9 +2,8 @@ import { GoogleGenerativeAI } from "https://cdn.jsdelivr.net/npm/@google/generat
 import { auth, db } from "./firebase.js";
 import { addDoc, collection, getDocs, deleteDoc }
   from "https://www.gstatic.com/firebasejs/12.5.0/firebase-firestore.js";
-import { showNotification, checkQuota, incrementQuota, sanitizeHTML } from "./utils.js";
+import { showNotification, checkQuota, incrementQuota, sanitizeHTML, getGeminiApiKey, rotateGeminiKey, retryOperation } from "./utils.js";
 
-const API_KEY = "AIzaSyAcaoCV_IhsD61HrYWewecC0Mpeys0LrbE";//skillsboost3
 
 // small helper to query single element
 const $ = (sel) => document.querySelector(sel);
@@ -83,16 +82,21 @@ async function fetchRelatedTopics(mainTopic) {
     const levelEl = document.getElementById("levelSelect");
     const level = levelEl ? levelEl.value : "beginner";
 
-    const genAI = new GoogleGenerativeAI(API_KEY);
     const preferredModel = "gemini-2.5-flash"; // or dynamically chosen from listModels()
-    const model = genAI.getGenerativeModel({ model: preferredModel });
-
 
     // Stronger prompt to ensure relevant & capped topics
     const prompt = `List the 10 most important subtopics for learning "${mainTopic}" at a ${level} level.
 Return ONLY the subtopic names, one per line, no numbering, no explanations.`;
 
-    const result = await model.generateContent(prompt);
+    const result = await retryOperation(async () => {
+      const genAI = new GoogleGenerativeAI(getGeminiApiKey());
+      const model = genAI.getGenerativeModel({ model: preferredModel });
+      return await model.generateContent(prompt);
+    }, 5, 1000, () => {
+      console.warn("fetchRelatedTopics API limit hit, rotating key...");
+      rotateGeminiKey();
+    });
+
     const raw = (result && result.response && typeof result.response.text === "function")
       ? await result.response.text()
       : (result && result.response) ? String(result.response) : "";
@@ -109,10 +113,19 @@ Return ONLY the subtopic names, one per line, no numbering, no explanations.`;
     if (topics.length < 5) {
       const strictPrompt = `Provide exactly 10 key subtopics for "${mainTopic}" at ${level} level.
 Only names, one per line, no numbering, no extra text.`;
-      const retry = await model.generateContent(strictPrompt);
-      const retryText = (retry && retry.response && typeof retry.response.text === "function")
-        ? await retry.response.text()
-        : (retry && retry.response) ? String(retry.response) : "";
+
+      const retryResult = await retryOperation(async () => {
+        const genAI = new GoogleGenerativeAI(getGeminiApiKey());
+        const model = genAI.getGenerativeModel({ model: preferredModel });
+        return await model.generateContent(strictPrompt);
+      }, 5, 1000, () => {
+        console.warn("fetchRelatedTopics retry API limit hit, rotating key...");
+        rotateGeminiKey();
+      });
+
+      const retryText = (retryResult && retryResult.response && typeof retryResult.response.text === "function")
+        ? await retryResult.response.text()
+        : (retryResult && retryResult.response) ? String(retryResult.response) : "";
       topics = retryText
         .split(/\r?\n|,|;/)
         .map(t => t.replace(/^[\s\d\.\)\-\*]+/, "").trim())
@@ -130,9 +143,9 @@ Only names, one per line, no numbering, no extra text.`;
 
 // call the models listing (v1beta) to see what model names the API currently exposes
 async function listModels() {
-  const url = "https://generativelanguage.googleapis.com/v1beta/models?key=" + API_KEY;
+  const url = "https://generativelanguage.googleapis.com/v1beta/models?key=" + getGeminiApiKey();
   const res = await fetch(url, {
-    headers: { "x-goog-api-key": API_KEY, "Content-Type": "application/json" }
+    headers: { "x-goog-api-key": getGeminiApiKey(), "Content-Type": "application/json" }
   });
   if (!res.ok) {
     const txt = await res.text();
@@ -228,9 +241,14 @@ async function generateRoadmap(topic) {
     }
     prompt += " Provide the roadmap as short ordered/bullet steps, each on a new line.";
 
-    const genAI = new GoogleGenerativeAI(API_KEY);
-    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
-    const result = await model.generateContent(prompt);
+    const result = await retryOperation(async () => {
+      const genAI = new GoogleGenerativeAI(getGeminiApiKey());
+      const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+      return await model.generateContent(prompt);
+    }, 5, 1000, () => {
+      console.warn("generateRoadmap API limit hit, rotating key...");
+      rotateGeminiKey();
+    });
     const responseText = await result.response.text();
 
     roadmapContainer.innerHTML = "";

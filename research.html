@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aidube | AI Research</title>
+    <meta name="description"
+        content="Research any topic instantly with Aidube AI. Get structured, cited, and easy-to-read educational summaries.">
+
+    <!-- Favicon -->
+    <link rel="icon" href="aidube_logo2.png" type="image/png">
+    <script type="module">
+        import { inject } from 'https://cdn.jsdelivr.net/npm/@vercel/analytics/+esm';
+        inject();
+    </script>
+    <!-- Google AdSense Auto Ads -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1717533159502136"
+        crossorigin="anonymous"></script>
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="css/toast.css">
+    <!-- Load base layout CSS and then specific research CSS -->
+    <link rel="stylesheet" href="css/roadmap.css">
+    <link rel="stylesheet" href="css/research.css">
+
+    <!-- Marked.js for Markdown parsing -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+</head>
+
+<body>
+    <header>
+        <div class="header-content">
+            <h1><i class="fas fa-wand-magic-sparkles"></i> AI Research Engine</h1>
+            <a href="index.html" class="back-button">
+                <i class="fas fa-arrow-left"></i>
+                <span>Dashboard</span>
+            </a>
+        </div>
+    </header>
+
+    <div class="container animate__animated animate__fadeIn">
+
+        <div class="research-header">
+            <h2>Research Topic: <span id="topicTitle">Loading...</span></h2>
+            <p>Our AI is scouring the web and synthesizing the best info for you.</p>
+        </div>
+
+        <!-- Native Ad - Top -->
+        <div class="ad-container-native" style="margin: 1.5rem 0; width: 100%; text-align: center;">
+            <span style="font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; display: block; margin-bottom: 0.5rem;">Sponsored</span>
+            <iframe class="native-ad-iframe" style="width: 100%; border: none; overflow: hidden; min-height: 100px; display: block;" scrolling="no" sandbox="allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox allow-top-navigation-by-user-activation" srcdoc="&lt;!DOCTYPE html&gt;&lt;html&gt;&lt;head&gt;&lt;meta name='viewport' content='width=device-width,initial-scale=1.0'&gt;&lt;style&gt;body{margin:0;padding:0;overflow:hidden;background:transparent;}#container-c4e03b5b676eb8461b0bde8f49fa1583{width:100%;}&lt;/style&gt;&lt;/head&gt;&lt;body&gt;&lt;div id='container-c4e03b5b676eb8461b0bde8f49fa1583'&gt;&lt;/div&gt;&lt;script async='async' data-cfasync='false' src='https://pl28846167.effectivegatecpm.com/c4e03b5b676eb8461b0bde8f49fa1583/invoke.js'&gt;&lt;/script&gt;&lt;script&gt;const observer=new ResizeObserver(()=&gt;{window.parent.postMessage({type:'resize-ad',height:document.body.scrollHeight},'*');});observer.observe(document.body);setInterval(()=&gt;window.parent.postMessage({type:'resize-ad',height:document.body.scrollHeight},'*'), 1000);&lt;/script&gt;&lt;/body&gt;&lt;/html&gt;"></iframe>
+        </div>
+
+        <div class="research-container">
+
+            <!-- Loading State -->
+            <div id="loadingState" class="loading-state">
+                <div class="spinner">
+                    <div class="double-bounce1"></div>
+                    <div class="double-bounce2"></div>
+                </div>
+                <h3>Synthesizing Web Content...</h3>
+                <p>This may take up to 20 seconds. Please wait.</p>
+            </div>
+
+            <!-- Error State -->
+            <div id="errorState" class="error-state" style="display: none;">
+                <i class="fas fa-exclamation-triangle fa-3x" style="color: #ef4444; margin-bottom: 1rem;"></i>
+                <h3>Research Failed</h3>
+                <p id="errorMsg">Something went wrong while fetching the research data.</p>
+                <button class="btn-primary" onclick="window.location.reload()" style="margin-top: 1.5rem;">Try
+                    Again</button>
+            </div>
+
+            <!-- Result State -->
+            <div id="resultState" style="display: none;">
+
+                <!-- Markdown Content gets injected here -->
+                <div id="markdownContent" class="markdown-body"></div>
+
+                <div class="sources-section">
+                    <h3><i class="fas fa-link"></i> External Resources</h3>
+                    <div id="resourcesContainer" class="resources-list">
+                        <!-- Resource cards injected here -->
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+
+        <!-- Native Ad - Bottom -->
+        <div class="ad-container-native" style="margin: 1.5rem 0; width: 100%; text-align: center;">
+            <span style="font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; display: block; margin-bottom: 0.5rem;">Sponsored</span>
+            <iframe class="native-ad-iframe" style="width: 100%; border: none; overflow: hidden; min-height: 100px; display: block;" scrolling="no" sandbox="allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox allow-top-navigation-by-user-activation" srcdoc="&lt;!DOCTYPE html&gt;&lt;html&gt;&lt;head&gt;&lt;meta name='viewport' content='width=device-width,initial-scale=1.0'&gt;&lt;style&gt;body{margin:0;padding:0;overflow:hidden;background:transparent;}#container-c4e03b5b676eb8461b0bde8f49fa1583{width:100%;}&lt;/style&gt;&lt;/head&gt;&lt;body&gt;&lt;div id='container-c4e03b5b676eb8461b0bde8f49fa1583'&gt;&lt;/div&gt;&lt;script async='async' data-cfasync='false' src='https://pl28846167.effectivegatecpm.com/c4e03b5b676eb8461b0bde8f49fa1583/invoke.js'&gt;&lt;/script&gt;&lt;script&gt;const observer=new ResizeObserver(()=&gt;{window.parent.postMessage({type:'resize-ad',height:document.body.scrollHeight},'*');});observer.observe(document.body);setInterval(()=&gt;window.parent.postMessage({type:'resize-ad',height:document.body.scrollHeight},'*'), 1000);&lt;/script&gt;&lt;/body&gt;&lt;/html&gt;"></iframe>
+        </div>
+    </div>
+
+    <!-- Note: reuse toast logic from utils if needed -->
+    <script type="module" src="js/research.js"></script>
+    <script>
+        window.addEventListener('message', function(e) {
+            if (e.data && e.data.type === 'resize-ad') {
+                document.querySelectorAll('.native-ad-iframe').forEach(iframe => {
+                    if (iframe.contentWindow === e.source) iframe.style.height = e.data.height + 'px';
+                });
+            }
+        });
+    </script>
+</body>
+
+</html>

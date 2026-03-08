@@ -278,3 +278,26 @@ p.subtitle {
 .hidden {
     display: none;
 }
+
+/* Responsive UI Adjustments */
+@media (max-width: 768px) {
+    .header-content span {
+        font-size: 1.25rem !important;
+    }
+
+    h1 {
+        font-size: 1.5rem !important;
+    }
+
+    p.subtitle, .form-group label, .form-input, .btn {
+        font-size: 0.85rem !important;
+    }
+
+    .login-card {
+        padding: 2rem 1.5rem;
+    }
+
+    .main-container {
+        padding: 1rem;
+    }
+}

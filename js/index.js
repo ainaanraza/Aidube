@@ -83,6 +83,21 @@ function redirectToRoadmap() {
   }
 }
 
+function redirectToResearch() {
+  const user = auth.currentUser;
+  if (!user) {
+    showNotification("You must be logged in to use the resource feature.", "warning");
+    return;
+  }
+
+  const query = document.getElementById("searchInput").value;
+  if (query) {
+    window.location.href = `research.html?topic=${encodeURIComponent(query)}`;
+  } else {
+    showNotification("Please enter a topic to research.", "warning");
+  }
+}
+
 function renderLastPlayed() {
   const container = document.getElementById("lastPlayedContainer");
   if (!container) return;
@@ -187,13 +202,26 @@ function renderPlaylistItems(playlists) {
 }
 
 
-async function fetchPlaylists() {
-  const searchQuery = document.getElementById("searchInput").value;
+async function fetchPlaylists(customQuery = null, isRandom = false, isFromLoad = false) {
+  const searchInput = document.getElementById("searchInput");
+  let searchQuery = searchInput?.value || "";
 
-  // Hide Resume section on search so results are visible immediately
-  const lastPlayedContainer = document.getElementById("lastPlayedContainer");
-  if (lastPlayedContainer) {
-    lastPlayedContainer.style.display = "none";
+  if (typeof customQuery === "string" && customQuery.trim() !== "") {
+    searchQuery = customQuery;
+  }
+
+  if (!searchQuery.trim()) return;
+
+  if (!isRandom && !isFromLoad) {
+    // Hide Resume section and top ad on manual search so results are visible immediately
+    const lastPlayedContainer = document.getElementById("lastPlayedContainer");
+    if (lastPlayedContainer) {
+      lastPlayedContainer.style.display = "none";
+    }
+    const topAd = document.getElementById("topMainAd");
+    if (topAd) {
+      topAd.style.display = "none";
+    }
   }
 
   const container = document.getElementById("playlistContainer");
@@ -201,7 +229,7 @@ async function fetchPlaylists() {
 
   try {
     const data = await retryOperation(async () => {
-      const url = `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${searchQuery}&type=playlist&key=${getYouTubeApiKey()}&maxResults=50`;
+      const url = `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(searchQuery)}&type=playlist&key=${getYouTubeApiKey()}&maxResults=50`;
       const response = await fetch(url);
 
       if (!response.ok) {
@@ -216,15 +244,39 @@ async function fetchPlaylists() {
       return;
     }
 
-    const user = auth.currentUser;
-    if (user) {
-      setDoc(doc(db, "users", user.uid, "lastSearch", "latest"), {
-        query: searchQuery,
-        results: data.items
-      }).catch(() => { });
+    if (!isRandom) {
+      localStorage.setItem("lastSearchQuery", searchQuery);
+      localStorage.setItem("lastSearchResults", JSON.stringify(data.items));
+
+      const user = auth.currentUser;
+      if (user) {
+        setDoc(doc(db, "users", user.uid, "lastSearch", "latest"), {
+          query: searchQuery,
+          results: data.items
+        }).catch(() => { });
+      }
     }
 
     renderPlaylists(data.items);
+
+    // Update header and scroll to results on manual search
+    if (!isRandom && !isFromLoad) {
+      // Update the heading to show what was searched
+      const headerText = document.getElementById("playlistsHeaderText");
+      if (headerText) {
+        headerText.textContent = `Results for: ${searchQuery}`;
+      }
+
+      // Scroll to the playlists header so results are immediately visible
+      setTimeout(() => {
+        const playlistsHeader = document.querySelector(".playlists-header");
+        if (playlistsHeader) {
+          const headerHeight = document.querySelector('header')?.offsetHeight || 0;
+          const targetPosition = playlistsHeader.getBoundingClientRect().top + window.pageYOffset - headerHeight - 10;
+          window.scrollTo({ top: targetPosition, behavior: 'smooth' });
+        }
+      }, 150);
+    }
 
   } catch (error) {
     // Error fetching playlists
@@ -481,31 +533,31 @@ async function clearAllRoadmaps() {
 
 
 const activeQuery = params.get("search");
+const savedQuery = localStorage.getItem("lastSearchQuery");
 
 if (!activeQuery) {
-  const searchInput = document.getElementById("searchInput");
-  if (auth.currentUser && searchInput) {
-    // Load last search from Firestore
-    const docRef = doc(db, "users", auth.currentUser.uid, "lastSearch", "latest");
-    getDoc(docRef)
-      .then(docSnap => {
-        if (docSnap.exists()) {
-          const data = docSnap.data();
-          searchInput.value = data.query;
-          renderPlaylists(data.results);
-        }
-      })
-      .catch(() => { });
-  } else if (searchInput) {
-    // Fallback to localStorage (if no logged-in user or if desired)
-    const savedResults = localStorage.getItem("lastSearchResults");
-    const savedQuery = localStorage.getItem("lastSearchQuery");
-    if (savedResults && savedQuery) {
-      searchInput.value = savedQuery;
-      renderPlaylists(JSON.parse(savedResults));
+  if (savedQuery) {
+    if (document.getElementById("searchInput")) {
+      document.getElementById("searchInput").value = savedQuery;
     }
-  }
 
+    // Attempt to load the exact results from cache to avoid another API call instantly
+    try {
+      const savedResults = JSON.parse(localStorage.getItem("lastSearchResults"));
+      if (savedResults && savedResults.length > 0) {
+        setTimeout(() => renderPlaylists(savedResults), 100);
+      } else {
+        setTimeout(() => fetchPlaylists(savedQuery, false, true), 100);
+      }
+    } catch (e) {
+      setTimeout(() => fetchPlaylists(savedQuery, false, true), 100);
+    }
+  } else {
+    // If absolutely no history, load a random topic
+    const educationTopics = ["Computer Science", "World History", "Quantum Physics", "Marine Biology", "Mathematics", "Art History", "Psychology", "Economics", "Philosophy", "Organic Chemistry", "Classic Literature", "Geography", "Music Theory", "Astronomy", "Sociology", "Data Science", "Graphic Design", "Machine Learning", "Artificial Intelligence", "Robotics", "Creative Writing", "Geology"];
+    const randomTopic = educationTopics[Math.floor(Math.random() * educationTopics.length)];
+    setTimeout(() => fetchPlaylists(randomTopic, true), 100);
+  }
 }
 
 
@@ -638,6 +690,9 @@ onAuthStateChanged(auth, async (user) => {
     watchUserRoadmaps();
     watchUserHistory();
 
+    // Removed Field of Interest logic
+
+
   } else {
     // No User
     localStorage.removeItem("userProfile"); // Clear sensitive cache
@@ -755,6 +810,7 @@ if (drawerLogoutBtn) {
 
 // Call this once when the app loads
 cleanupInvalidHistory();
+
 export { updateLectureHistory, clearAllLectureHistory };
 
 
@@ -765,6 +821,7 @@ window.clearAllLectureHistory = clearAllLectureHistory;
 window.updateLectureHistory = updateLectureHistory;
 window.fetchPlaylists = fetchPlaylists;
 window.redirectToRoadmap = redirectToRoadmap;
+window.redirectToResearch = redirectToResearch;
 window.clearAllSavedPlaylists = clearAllSavedPlaylists;
 window.toggleSidebar = toggleSidebar;
 window.updateLectureHistory = updateLectureHistory;

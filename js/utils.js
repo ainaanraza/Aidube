@@ -157,3 +157,57 @@ export function sanitizeHTML(str) {
         .replace(/"/g, '&quot;')
         .replace(/'/g, '&#039;');
 }
+
+export async function awardCredits(amount, reason) {
+    const user = auth.currentUser;
+    showNotification(`Earned ${amount} Credits for ${reason}!`, "success");
+
+    if (user) {
+        try {
+            const userRef = doc(db, "users", user.uid);
+            await setDoc(userRef, {
+                credits: increment(amount)
+            }, { merge: true });
+
+            // Log history to firestore for safe keeping
+            const historyRef = doc(db, "users", user.uid, "creditHistory", `${Date.now()}`);
+            await setDoc(historyRef, { amount, reason, timestamp: Date.now() });
+        } catch (e) {
+            console.error("Error saving credits", e);
+        }
+    }
+}
+
+export async function trackVideoCompletion(videoId, videoTitle, playlistId) {
+    const user = auth.currentUser;
+    if (user) {
+        try {
+            const docRef = doc(db, "users", user.uid, "completedVideos", videoId);
+            await setDoc(docRef, {
+                videoId, title: videoTitle, playlistId, completedAt: Date.now()
+            }, { merge: true });
+        } catch (e) { }
+    }
+}
+
+// Global Time Tracker
+function initTimeTracker() {
+    // Read total minutes stored locally or default to 0
+    let totalMinutes = parseInt(localStorage.getItem("totalMinutesSpent") || "0");
+    let previousHours = Math.floor(totalMinutes / 60);
+
+    setInterval(() => {
+        totalMinutes += 1; // tick every minute
+        localStorage.setItem("totalMinutesSpent", totalMinutes.toString());
+
+        let currentHours = Math.floor(totalMinutes / 60);
+        if (currentHours > previousHours) {
+            // Reached a new hour
+            awardCredits(1, `spending ${currentHours} hour(s) learning`);
+            previousHours = currentHours;
+        }
+    }, 60 * 1000); // 1 minute
+}
+
+// Start tracking immediately
+initTimeTracker();

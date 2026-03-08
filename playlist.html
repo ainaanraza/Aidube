@@ -21,6 +21,9 @@
     import { inject } from 'https://cdn.jsdelivr.net/npm/@vercel/analytics/+esm';
     inject();
   </script>
+  <!-- Google AdSense Auto Ads -->
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1717533159502136"
+    crossorigin="anonymous"></script>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
     rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
@@ -49,6 +52,17 @@
 
   <main class="main-content">
     <section class="video-section">
+      <!-- Course Title and Introduction -->
+      <div class="course-header" style="margin-bottom: 1.5rem;">
+        <h1 id="courseTitle"
+          style="font-size: 1.75rem; font-weight: 800; color: var(--text); margin-bottom: 0.5rem; line-height: 1.2;">
+          Course Loading...</h1>
+        <div id="courseIntro" class="course-intro"
+          style="color: var(--text-muted); font-size: 0.95rem; line-height: 1.6;">Preparing your educational content...
+        </div>
+      </div>
+
+      <!-- Embedded YouTube Video -->
       <div class="video-player" id="videoPlayer">
         <div class="loading">
           <div class="spinner"
@@ -65,27 +79,79 @@
         </div>
       </div>
 
-      <div class="video-actions">
-        <div class="action-group">
-          <h3>Study Intelligence</h3>
-          <div class="action-buttons">
-            <button id="notesBtn" class="action-btn">
-              <i class="fas fa-magic"></i> Generate Notes
+      <!-- AI Tools Section -->
+      <div class="video-actions" style="margin-top: 2rem; margin-bottom: 2rem;">
+        <div class="action-group" style="grid-column: 1 / -1;">
+          <h3 style="font-size: 1.1rem; color: var(--text); margin-bottom: 1rem;"><i class="fas fa-robot"></i> AI Tools
+          </h3>
+          <div class="action-buttons" style="display: flex; gap: 1rem; flex-wrap: wrap;">
+            <button id="askAiBtn" class="action-btn" style="flex: 1; min-width: 150px;">
+              <i class="fas fa-comment-dots"></i> Ask Aidube
             </button>
-            <button id="summaryBtn" class="action-btn">
-              <i class="fas fa-bolt"></i> Quick Summary
+            <button id="notesBtn" class="action-btn" style="flex: 1; min-width: 150px;">
+              <i class="fas fa-magic"></i> Generate Notes PDF
             </button>
+            <button id="summaryBtn" class="action-btn" style="flex: 1; min-width: 150px;">
+              <i class="fas fa-bolt"></i> Quick Summary PDF
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Native Ad - Under Video -->
+      <div class="ad-container-native" style="margin: 2rem 0; width: 100%; text-align: center; background: var(--surface); padding: 1rem; border-radius: var(--radius); border: 1px solid var(--border);">
+        <span style="font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; display: block; margin-bottom: 0.5rem;">Sponsored</span>
+        <iframe class="native-ad-iframe" style="width: 100%; border: none; overflow: hidden; min-height: 100px; display: block;" scrolling="no" sandbox="allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox allow-top-navigation-by-user-activation" srcdoc="&lt;!DOCTYPE html&gt;&lt;html&gt;&lt;head&gt;&lt;meta name='viewport' content='width=device-width,initial-scale=1.0'&gt;&lt;style&gt;body{margin:0;padding:0;overflow:hidden;background:transparent;}#container-c4e03b5b676eb8461b0bde8f49fa1583{width:100%;}&lt;/style&gt;&lt;/head&gt;&lt;body&gt;&lt;div id='container-c4e03b5b676eb8461b0bde8f49fa1583'&gt;&lt;/div&gt;&lt;script async='async' data-cfasync='false' src='https://pl28846167.effectivegatecpm.com/c4e03b5b676eb8461b0bde8f49fa1583/invoke.js'&gt;&lt;/script&gt;&lt;script&gt;const observer=new ResizeObserver(()=&gt;{window.parent.postMessage({type:'resize-ad',height:document.body.scrollHeight},'*');});observer.observe(document.body);setInterval(()=&gt;window.parent.postMessage({type:'resize-ad',height:document.body.scrollHeight},'*'), 1000);&lt;/script&gt;&lt;/body&gt;&lt;/html&gt;"></iframe>
+      </div>
+
+      <!-- Course Content Sections -->
+      <div class="course-content-tabs">
+
+        <div class="content-section" id="section-quiz"
+          style="margin-bottom: 2rem; background: var(--surface); padding: 1.5rem; border-radius: var(--radius); border: 1px solid var(--border);">
+          <h3
+            style="font-size: 1.25rem; font-weight: 700; border-bottom: 2px solid var(--bg); padding-bottom: 0.5rem; margin-bottom: 1rem; color: var(--primary-dark);">
+            Practice Test</h3>
+          <div id="quizContent"
+            style="color: var(--text); line-height: 1.6; margin-bottom: 1.5rem; font-size: 0.95rem;">
+            <p>Ready to test your knowledge on this topic?</p>
+          </div>
+          <button id="testBtn" class="action-btn test-btn"
+            style="width: auto; padding: 0.75rem 1.5rem; display: inline-flex;">
+            <i class="fas fa-graduation-cap"></i> Generate Practice Test
+          </button>
+        </div>
+
+        <div class="content-section" id="section-summary"
+          style="margin-bottom: 2rem; background: var(--surface); padding: 1.5rem; border-radius: var(--radius); border: 1px solid var(--border);">
+          <h3
+            style="font-size: 1.25rem; font-weight: 700; border-bottom: 2px solid var(--bg); padding-bottom: 0.5rem; margin-bottom: 1rem; color: var(--primary-dark);">
+            Article</h3>
+          <div id="lessonSummaryContent" style="color: var(--text); line-height: 1.6; font-size: 0.95rem;">
+            <p>Article will be generated here.</p>
           </div>
         </div>
 
-        <div class="action-group">
-          <h3>Knowledge Check</h3>
-          <div class="action-buttons">
-            <button id="testBtn" class="action-btn test-btn">
-              <i class="fas fa-graduation-cap"></i> Practice Test
-            </button>
+        <div class="content-section" id="section-concepts"
+          style="margin-bottom: 2rem; background: var(--surface); padding: 1.5rem; border-radius: var(--radius); border: 1px solid var(--border);">
+          <h3
+            style="font-size: 1.25rem; font-weight: 700; border-bottom: 2px solid var(--bg); padding-bottom: 0.5rem; margin-bottom: 1rem; color: var(--primary-dark);">
+            Key Concepts</h3>
+          <div id="keyConceptsContent" style="color: var(--text); line-height: 1.6; font-size: 0.95rem;">
+            <p>Important keywords and concepts will be extracted here.</p>
           </div>
         </div>
+
+        <div class="content-section" id="section-notes"
+          style="margin-bottom: 2rem; background: var(--surface); padding: 1.5rem; border-radius: var(--radius); border: 1px solid var(--border);">
+          <h3
+            style="font-size: 1.25rem; font-weight: 700; border-bottom: 2px solid var(--bg); padding-bottom: 0.5rem; margin-bottom: 1rem; color: var(--primary-dark);">
+            Notes / Explanation</h3>
+          <div id="notesContent" style="color: var(--text); line-height: 1.6; font-size: 0.95rem;">
+            <p>Detailed notes for this lesson will appear here.</p>
+          </div>
+        </div>
+
       </div>
     </section>
 
@@ -94,6 +160,7 @@
         <h2>Curated Playlist</h2>
         <p id="videoCount" style="font-size: 0.825rem; color: var(--text-muted); margin-top: 0.25rem;">0 Videos</p>
       </div>
+
       <div class="video-list" id="videoList">
         <!-- Videos will be injected here -->
       </div>
@@ -101,6 +168,15 @@
   </main>
 
   <script type="module" src="js/playlist.js"></script>
+  <script>
+    window.addEventListener('message', function(e) {
+      if (e.data && e.data.type === 'resize-ad') {
+        document.querySelectorAll('.native-ad-iframe').forEach(iframe => {
+          if (iframe.contentWindow === e.source) iframe.style.height = e.data.height + 'px';
+        });
+      }
+    });
+  </script>
 </body>
 
 </html>

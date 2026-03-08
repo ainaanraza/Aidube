@@ -34,6 +34,9 @@
     import { inject } from 'https://cdn.jsdelivr.net/npm/@vercel/analytics/+esm';
     inject();
   </script>
+  <!-- Google AdSense Auto Ads -->
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1717533159502136"
+    crossorigin="anonymous"></script>
 </head>
 
 <body>
@@ -75,6 +78,12 @@
     </div>
 
     <div class="drawer-content">
+      <div class="drawer-section" style="margin-bottom: 1.5rem;">
+        <button class="btn-golden" style="width: 100%; justify-content: center;"
+          onclick="window.location.href='analytics.html'">
+          <i class="fas fa-chart-pie"></i> Analytics & Earnings
+        </button>
+      </div>
       <div class="drawer-section">
         <h3><i class="fas fa-list-ul"></i> Saved Playlists</h3>
         <div id="drawerSavedPlaylists" class="saved-list"></div>
@@ -99,8 +108,15 @@
     </div>
   </div>
 
+
+
   <div class="container">
     <aside class="sidebar">
+
+      <button class="btn-golden" style="width: 100%; justify-content: center; margin-bottom: 1.5rem;"
+        onclick="window.location.href='analytics.html'">
+        <i class="fas fa-chart-pie"></i> Analytics & Earnings
+      </button>
 
       <div class="sidebar-card">
         <h3><i class="fas fa-list-ul"></i> Saved Playlists</h3>
@@ -117,6 +133,17 @@
           <i class="fas fa-trash-alt"></i> Clear All
         </button>
       </div>
+
+      <!-- Native Ad - Sidebar -->
+      <div class="ad-container-native sidebar-ad"
+        style="margin: 1.5rem 0; width: 100%; text-align: center; background: var(--surface); padding: 1rem; border-radius: var(--radius); border: 1px solid var(--border);">
+        <span
+          style="font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; display: block; margin-bottom: 0.5rem;">Sponsored</span>
+        <iframe class="native-ad-iframe"
+          style="width: 100%; border: none; overflow: hidden; min-height: 100px; display: block;" scrolling="no"
+          sandbox="allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox allow-top-navigation-by-user-activation"
+          srcdoc="&lt;!DOCTYPE html&gt;&lt;html&gt;&lt;head&gt;&lt;meta name='viewport' content='width=device-width,initial-scale=1.0'&gt;&lt;style&gt;body{margin:0;padding:0;overflow:hidden;background:transparent;}#container-c4e03b5b676eb8461b0bde8f49fa1583{width:100%;}&lt;/style&gt;&lt;/head&gt;&lt;body&gt;&lt;div id='container-c4e03b5b676eb8461b0bde8f49fa1583'&gt;&lt;/div&gt;&lt;script async='async' data-cfasync='false' src='https://pl28846167.effectivegatecpm.com/c4e03b5b676eb8461b0bde8f49fa1583/invoke.js'&gt;&lt;/script&gt;&lt;script&gt;const observer=new ResizeObserver(()=&gt;{window.parent.postMessage({type:'resize-ad',height:document.body.scrollHeight},'*');});observer.observe(document.body);setInterval(()=&gt;window.parent.postMessage({type:'resize-ad',height:document.body.scrollHeight},'*'), 1000);&lt;/script&gt;&lt;/body&gt;&lt;/html&gt;"></iframe>
+      </div>
     </aside>
 
     <main class="main-content">
@@ -129,6 +156,9 @@
         <button class="btn-secondary" onclick="redirectToRoadmap()">
           <i class="fas fa-map"></i> Roadmap
         </button>
+        <button class="btn-resource" onclick="redirectToResearch()">
+          <i class="fas fa-book"></i> Resource
+        </button>
         <button class="btn-ghost" onclick="window.location.href='history.html'">
           <i class="fas fa-history"></i> History
         </button>
@@ -136,13 +166,33 @@
 
       <div id="lastPlayedContainer"></div>
 
+      <!-- Native Ad - Top of Main -->
+      <div id="topMainAd" class="ad-container-native" style="margin: 1.5rem 0; width: 100%; text-align: center;">
+        <span
+          style="font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; display: block; margin-bottom: 0.5rem;">Sponsored</span>
+        <iframe class="native-ad-iframe"
+          style="width: 100%; border: none; overflow: hidden; min-height: 100px; display: block;" scrolling="no"
+          sandbox="allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox allow-top-navigation-by-user-activation"
+          srcdoc="&lt;!DOCTYPE html&gt;&lt;html&gt;&lt;head&gt;&lt;meta name='viewport' content='width=device-width,initial-scale=1.0'&gt;&lt;style&gt;body{margin:0;padding:0;overflow:hidden;background:transparent;}#container-c4e03b5b676eb8461b0bde8f49fa1583{width:100%;}&lt;/style&gt;&lt;/head&gt;&lt;body&gt;&lt;div id='container-c4e03b5b676eb8461b0bde8f49fa1583'&gt;&lt;/div&gt;&lt;script async='async' data-cfasync='false' src='https://pl28846167.effectivegatecpm.com/c4e03b5b676eb8461b0bde8f49fa1583/invoke.js'&gt;&lt;/script&gt;&lt;script&gt;const observer=new ResizeObserver(()=&gt;{window.parent.postMessage({type:'resize-ad',height:document.body.scrollHeight},'*');});observer.observe(document.body);setInterval(()=&gt;window.parent.postMessage({type:'resize-ad',height:document.body.scrollHeight},'*'), 1000);&lt;/script&gt;&lt;/body&gt;&lt;/html&gt;"></iframe>
+      </div>
+
       <div class="playlists-header"
         style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-        <h2 style="font-size: 1.5rem; font-weight: 800; color: var(--text);">Recommended for You</h2>
+        <h2 id="playlistsHeaderText" style="font-size: 1.5rem; font-weight: 800; color: var(--text);">Recommended for You</h2>
       </div>
 
       <div class="playlists" id="playlistContainer">
         <!-- Playlists will be injected here -->
+      </div>
+
+      <!-- Native Ad - Bottom of Main -->
+      <div class="ad-container-native mobile-only-ad" style="margin: 2rem 0; width: 100%; text-align: center;">
+        <span
+          style="font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; display: block; margin-bottom: 0.5rem;">Sponsored</span>
+        <iframe class="native-ad-iframe"
+          style="width: 100%; border: none; overflow: hidden; min-height: 100px; display: block;" scrolling="no"
+          sandbox="allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox allow-top-navigation-by-user-activation"
+          srcdoc="&lt;!DOCTYPE html&gt;&lt;html&gt;&lt;head&gt;&lt;meta name='viewport' content='width=device-width,initial-scale=1.0'&gt;&lt;style&gt;body{margin:0;padding:0;overflow:hidden;background:transparent;}#container-c4e03b5b676eb8461b0bde8f49fa1583{width:100%;}&lt;/style&gt;&lt;/head&gt;&lt;body&gt;&lt;div id='container-c4e03b5b676eb8461b0bde8f49fa1583'&gt;&lt;/div&gt;&lt;script async='async' data-cfasync='false' src='https://pl28846167.effectivegatecpm.com/c4e03b5b676eb8461b0bde8f49fa1583/invoke.js'&gt;&lt;/script&gt;&lt;script&gt;const observer=new ResizeObserver(()=&gt;{window.parent.postMessage({type:'resize-ad',height:document.body.scrollHeight},'*');});observer.observe(document.body);setInterval(()=&gt;window.parent.postMessage({type:'resize-ad',height:document.body.scrollHeight},'*'), 1000);&lt;/script&gt;&lt;/body&gt;&lt;/html&gt;"></iframe>
       </div>
     </main>
   </div>
@@ -152,7 +202,16 @@
         style="color: var(--primary); text-decoration: none;">Privacy Policy</a></p>
   </footer>
 
-  <script type="module" src="js/index.js"></script>
+  <script type="module" src="js/index.js?v=3"></script>
+  <script>
+    window.addEventListener('message', function (e) {
+      if (e.data && e.data.type === 'resize-ad') {
+        document.querySelectorAll('.native-ad-iframe').forEach(iframe => {
+          if (iframe.contentWindow === e.source) iframe.style.height = e.data.height + 'px';
+        });
+      }
+    });
+  </script>
 </body>
 
 </html>

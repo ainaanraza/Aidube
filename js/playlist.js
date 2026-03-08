@@ -1,6 +1,6 @@
 import { auth, db } from "./firebase.js";
-import { setDoc, doc, getDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-firestore.js";
-import { getYouTubeApiKey, rotateYouTubeKey, isValidPlaylistId, retryOperation, getGeminiApiKey, rotateGeminiKey, showNotification, checkQuota, incrementQuota, sanitizeHTML } from "./utils.js";
+import { setDoc, doc, getDoc, deleteDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-firestore.js";
+import { getYouTubeApiKey, rotateYouTubeKey, isValidPlaylistId, retryOperation, getGeminiApiKey, rotateGeminiKey, showNotification, checkQuota, incrementQuota, sanitizeHTML, trackVideoCompletion, awardCredits } from "./utils.js";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
 
@@ -10,6 +10,14 @@ const lastVideoId = urlParams.get('videoId');
 
 const videoPlayer = document.getElementById("videoPlayer");
 const videoList = document.getElementById("videoList");
+
+// Load YouTube Iframe API
+const tag = document.createElement('script');
+tag.src = "https://www.youtube.com/iframe_api";
+const firstScriptTag = document.getElementsByTagName('script')[0];
+firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+
+let ytPlayer;
 
 // Current playlist title state
 let currentPlaylistTitle = "Unknown Playlist";
@@ -42,7 +50,9 @@ async function loadPlaylist(pageToken = "") {
       return;
     }
 
-    displayVideos(data.items);
+    const isFirstPage = pageToken === "";
+    const totalResults = data.pageInfo ? data.pageInfo.totalResults : null;
+    displayVideos(data.items, isFirstPage, totalResults);
 
     if (data.nextPageToken) {
       await loadPlaylist(data.nextPageToken);
@@ -63,12 +73,25 @@ async function loadPlaylist(pageToken = "") {
   }
 }
 
-function displayVideos(videos) {
-  videoList.innerHTML = ""; // Clear existing
+let currentVideoIndex = 0;
+
+function displayVideos(videos, isFirstPage = true, totalResults = null) {
+  if (isFirstPage) {
+    videoList.innerHTML = ""; // Clear existing
+    currentVideoIndex = 0;
+  }
+  
   const countElement = document.getElementById("videoCount");
-  if (countElement) countElement.textContent = `${videos.length} Professional Lessons`;
+  if (countElement) {
+    if (totalResults !== null) {
+      countElement.textContent = `${totalResults} Professional Lessons`;
+    } else if (isFirstPage) {
+      countElement.textContent = `${videos.length} Professional Lessons`;
+    }
+  }
 
   videos.forEach((video, index) => {
+    currentVideoIndex++;
     const videoId = video.snippet.resourceId.videoId;
     const videoTitle = video.snippet.title;
     const thumbnailUrl = video.snippet.thumbnails.medium?.url || video.snippet.thumbnails.default?.url || `https://i.ytimg.com/vi/${videoId}/mqdefault.jpg`;
@@ -83,7 +106,7 @@ function displayVideos(videos) {
       <div class="video-info">
         <div class="video-title">${sanitizeHTML(videoTitle)}</div>
         <div style="font-size: 0.7rem; color: var(--text-muted); margin-top: 0.25rem;">
-          <i class="fas fa-play-circle"></i> Lesson ${index + 1}
+          <i class="fas fa-play-circle"></i> Lesson ${currentVideoIndex}
         </div>
       </div>
     `;
@@ -94,7 +117,7 @@ function displayVideos(videos) {
     };
     videoList.appendChild(videoItem);
 
-    if (index === 0 && !lastVideoId) {
+    if (isFirstPage && index === 0 && !lastVideoId) {
       playVideo(videoId, videoTitle);
       videoItem.classList.add("active");
     }
@@ -108,16 +131,12 @@ function displayVideos(videos) {
 }
 
 async function playVideo(videoId, videoTitle) {
-  videoPlayer.innerHTML = `
-    <iframe 
-      width="100%" 
-      height="100%" 
-      src="https://www.youtube-nocookie.com/embed/${videoId}?rel=0&showinfo=0" 
-      frameborder="0" 
-      allow="encrypted-media" 
-      allowfullscreen>
-    </iframe>
-  `;
+  videoPlayer.innerHTML = `<div id="yt-player-container"></div>`;
+
+  const titleEl = document.getElementById("courseTitle");
+  if (titleEl) titleEl.textContent = videoTitle;
+  
+  populateLessonContent(videoId, videoTitle);
 
   // Save to last played
   localStorage.setItem("lastPlayedVideo", JSON.stringify({
@@ -126,11 +145,56 @@ async function playVideo(videoId, videoTitle) {
     title: videoTitle
   }));
 
+  // Initialize or load video into existing player
+  const initPlayer = () => {
+    if (ytPlayer) {
+      ytPlayer.destroy();
+    }
+    ytPlayer = new window.YT.Player('yt-player-container', {
+      height: '100%',
+      width: '100%',
+      videoId: videoId,
+      playerVars: { 'rel': 0, 'showinfo': 0 },
+      events: {
+        'onStateChange': async (event) => {
+          if (event.data === window.YT.PlayerState.ENDED) {
+            await trackVideoCompletion(videoId, videoTitle, playlistId);
+
+            // Check playlist completion via Firebase
+            const user = auth.currentUser;
+            if (user) {
+              const videosSnapshot = await getDocs(collection(db, "users", user.uid, "completedVideos"));
+              const completed = videosSnapshot.docs.map(doc => doc.data());
+              const completedInPlaylist = completed.filter(v => v.playlistId === playlistId).length;
+
+              const totalVideosElements = document.querySelectorAll('.video-item');
+              if (totalVideosElements.length > 0 && completedInPlaylist >= totalVideosElements.length) {
+                const docRef = doc(db, "users", user.uid, "completedPlaylists", playlistId);
+                const docSnap = await getDoc(docRef);
+                if (!docSnap.exists()) {
+                  await setDoc(docRef, { completedAt: Date.now(), playlistId }, { merge: true });
+                  showNotification("Course Completed! Badge Earned!", "success");
+                }
+              }
+            }
+          }
+        }
+      }
+    });
+  };
+
+  if (window.YT && window.YT.Player) {
+    initPlayer();
+  } else {
+    // API not ready yet, queue it. 
+    // The standard callback is onYouTubeIframeAPIReady, but if multiple videos are clicked fast, handle safely:
+    window.onYouTubeIframeAPIReady = initPlayer;
+  }
+
   // Save to cloud history
   try {
     const user = auth.currentUser;
     if (user) {
-      // Skip saving individual videos to history
       if (videoId.length > 11 && (videoId.startsWith("PL") || videoId.startsWith("UU") || videoId.startsWith("FL"))) {
         await setDoc(doc(db, "users", user.uid, "history", videoId), {
           title: videoTitle,
@@ -141,10 +205,7 @@ async function playVideo(videoId, videoTitle) {
         }, { merge: true });
       }
     }
-
-  } catch (e) {
-    // Cloud history write failed
-  }
+  } catch (e) { }
 }
 
 // Add CSS for error message
@@ -213,8 +274,180 @@ async function fetchVideoDetails(videoId) {
       return `Title: ${snippet.title}\n\nDescription:\n${snippet.description}`;
     }, 3, 1000, rotateYouTubeKey);
   } catch (e) {
-    // console.warn removed
     return null;
+  }
+}
+
+async function fetchWikipediaContext(query) {
+  try {
+    let cleanQuery = query
+      .replace(/\|.*/g, '')
+      .replace(/-.*/g, '')
+      .replace(/\[.*?\]/g, '')
+      .replace(/\(.*?\)/g, '')
+      .replace(/#\w+/g, '')
+      .replace(/tutorial|crash course|full course|for beginners|in \d{4}|part \d+/gi, '')
+      .trim();
+
+    if (!cleanQuery) return null;
+
+    const searchUrl = `https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(cleanQuery)}&utf8=&format=json&origin=*`;
+    const searchRes = await fetch(searchUrl);
+    const searchData = await searchRes.json();
+
+    if (!searchData.query?.search?.length) return null;
+
+    const bestMatchTitle = searchData.query.search[0].title;
+
+    const summaryUrl = `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(bestMatchTitle)}`;
+    const summaryRes = await fetch(summaryUrl);
+
+    if (!summaryRes.ok) return null;
+    const summaryData = await summaryRes.json();
+
+    const contentUrl = `https://en.wikipedia.org/w/api.php?action=query&prop=extracts&exintro=false&titles=${encodeURIComponent(bestMatchTitle)}&format=json&origin=*&exsentences=15`;
+    const contentRes = await fetch(contentUrl);
+    const contentData = await contentRes.json();
+
+    const pages = contentData.query?.pages;
+    let extendedExtract = null;
+    if (pages) {
+      const pageId = Object.keys(pages)[0];
+      if (pageId !== "-1") {
+        extendedExtract = pages[pageId].extract;
+      }
+    }
+
+    return {
+      title: summaryData.title,
+      summary: summaryData.extract,
+      description: summaryData.description,
+      thumbnail: summaryData.thumbnail?.source,
+      articleUrl: summaryData.content_urls?.desktop?.page,
+      extendedExtract: extendedExtract
+    };
+  } catch (e) {
+    return null;
+  }
+}
+
+async function getTopicKeywordFromYouTube(videoId, fallbackTitle) {
+  const result = { keyword: fallbackTitle, description: "" };
+  try {
+    const url = `https://www.googleapis.com/youtube/v3/videos?part=snippet&id=${videoId}&key=${getYouTubeApiKey()}`;
+    const res = await fetch(url);
+    if (!res.ok) return result;
+    const data = await res.json();
+    
+    if (data.items && data.items.length > 0) {
+      const snippet = data.items[0].snippet;
+      result.description = snippet.description;
+      
+      // Look for the most relevant tag
+      if (snippet.tags && snippet.tags.length > 0) {
+        const ignoreList = ['tutorial', 'course', 'video', 'hindi', 'english', 'tech', 'programming', 'youtube', 'lesson', 'class', 'learn', 'beginner', 'advanced'];
+        const bestTag = snippet.tags.find(tag => tag.length >= 3 && !ignoreList.some(bad => tag.toLowerCase().includes(bad)));
+        if (bestTag) result.keyword = bestTag;
+      } else {
+        result.keyword = snippet.title;
+      }
+    }
+  } catch(e) { }
+  return result;
+}
+
+async function populateLessonContent(videoId, videoTitle) {
+  const summaryEl = document.getElementById("lessonSummaryContent");
+  const conceptsEl = document.getElementById("keyConceptsContent");
+  const notesEl = document.getElementById("notesContent");
+  const introEl = document.getElementById("courseIntro");
+
+  if (summaryEl) summaryEl.innerHTML = `<div class="loading-state"><i class="fas fa-spinner fa-spin"></i> Finding related article...</div>`;
+  if (conceptsEl) conceptsEl.innerHTML = `<div class="loading-state"><i class="fas fa-spinner fa-spin"></i> Analyzing concepts...</div>`;
+  if (notesEl) notesEl.innerHTML = `<div class="loading-state"><i class="fas fa-spinner fa-spin"></i> Compiling notes...</div>`;
+  if (introEl) introEl.textContent = "Loading description...";
+
+  try {
+    // Find the absolute best keyword and fetch description from youtube
+    const ytData = await getTopicKeywordFromYouTube(videoId, videoTitle);
+    const optimizedTopic = ytData.keyword;
+    
+    // Inject the real YouTube description right away
+    if (introEl) {
+      if (ytData.description && ytData.description.trim() !== "") {
+        introEl.innerHTML = `
+          <div id="descText" style="white-space: pre-wrap; word-break: break-word; overflow-wrap: break-word; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; font-size: 0.95rem; color: var(--text-muted); line-height: 1.6;">${sanitizeHTML(ytData.description)}</div>
+          <a href="#" id="seeDescBtn" style="color: var(--primary); font-size: 0.85rem; text-decoration: none; display: inline-block; margin-top: 0.5rem; font-weight: 600;">See Description</a>
+        `;
+        const seeDescBtn = document.getElementById('seeDescBtn');
+        const descText = document.getElementById('descText');
+        seeDescBtn.addEventListener('click', (e) => {
+          e.preventDefault();
+          if (descText.style.webkitLineClamp === '3') {
+            descText.style.webkitLineClamp = 'unset';
+            e.target.textContent = 'Hide Description';
+          } else {
+            descText.style.webkitLineClamp = '3';
+            e.target.textContent = 'See Description';
+          }
+        });
+      } else {
+        introEl.textContent = "No description available for this video.";
+      }
+    }
+    
+    // Attempt Wikipedia fetch with optimized keyword
+    let wikiData = await fetchWikipediaContext(optimizedTopic);
+    
+    // If that fails, fallback to the original video title just in case
+    if (!wikiData && optimizedTopic !== videoTitle) {
+      wikiData = await fetchWikipediaContext(videoTitle);
+    }
+
+    if (wikiData && wikiData.summary) {
+      if (summaryEl) {
+        summaryEl.innerHTML = `
+          <p><strong>Topic: ${wikiData.title}</strong> ${wikiData.description ? `(${wikiData.description})` : ''}</p>
+          <p style="margin-top: 1rem;">${wikiData.summary.replace(/\n/g, '<br>')}</p>
+          <a href="${wikiData.articleUrl}" target="_blank" style="display: inline-block; margin-top: 1rem; color: var(--primary); font-size: 0.85rem; text-decoration: none;"><i class="fas fa-external-link-alt"></i> Read full Wikipedia Article</a>
+        `;
+      }
+
+      if (conceptsEl) {
+        const words = wikiData.summary.split(/\s+/);
+        const entities = new Set();
+        words.forEach(word => {
+          const cleanWord = word.replace(/[.,()"']/g, '');
+          if (cleanWord.length > 3 && /^[A-Z]/.test(cleanWord)) entities.add(cleanWord);
+        });
+        wikiData.title.split(/\s+/).forEach(w => { if (w.length > 3) entities.add(w); });
+
+        const tagsArray = Array.from(entities).slice(0, 10);
+        if (tagsArray.length > 0) {
+          const tagsHTML = tagsArray.map(tag => `<span class="concept-tag">${sanitizeHTML(tag)}</span>`).join('');
+          conceptsEl.innerHTML = `<div class="concept-tags-container">${tagsHTML}</div>`;
+        } else {
+          conceptsEl.innerHTML = `<p style="color: var(--text-muted); font-style: italic;">Broad topic inferred: ${sanitizeHTML(wikiData.title)}</p>`;
+        }
+      }
+
+      if (notesEl) {
+        if (wikiData.extendedExtract) {
+          let cleanHTML = wikiData.extendedExtract.replace(/class=".*?"/g, '').replace(/id=".*?"/g, '');
+          notesEl.innerHTML = `<div class="transcript-notes">${cleanHTML}</div>`;
+        } else {
+          notesEl.innerHTML = `<p style="color: var(--text-muted); font-style: italic;">Detailed notes mapped to this topic could not be found.</p>`;
+        }
+      }
+    } else {
+      if (summaryEl) summaryEl.innerHTML = `<p style="color: var(--text-muted); font-style: italic;">No direct encyclopedia mapping found for "${sanitizeHTML(videoTitle)}".</p>`;
+      if (conceptsEl) conceptsEl.innerHTML = `<p style="color: var(--text-muted); font-style: italic;">Concept analysis relies on contextual matching.</p>`;
+      if (notesEl) notesEl.innerHTML = `<p style="color: var(--text-muted); font-style: italic;">Watch the core video material for this lesson's details.</p>`;
+    }
+  } catch (e) {
+    if (summaryEl) summaryEl.innerHTML = `<p style="color: var(--text-muted); font-style: italic;">Content unavailable.</p>`;
+    if (conceptsEl) conceptsEl.innerHTML = `<p style="color: var(--text-muted); font-style: italic;">Content unavailable.</p>`;
+    if (notesEl) notesEl.innerHTML = `<p style="color: var(--text-muted); font-style: italic;">Content unavailable.</p>`;
   }
 }
 
@@ -532,8 +765,16 @@ document.addEventListener('DOMContentLoaded', () => {
   const btnSummary = document.getElementById('summaryBtn');
   const btnTest = document.getElementById('testBtn');
 
+  const btnAskAi = document.getElementById('askAiBtn');
+
   if (btnNotes) btnNotes.addEventListener('click', () => handleGenerateDocument('notes', btnNotes));
   if (btnSummary) btnSummary.addEventListener('click', () => handleGenerateDocument('summary', btnSummary));
+
+  if (btnAskAi) {
+    btnAskAi.addEventListener('click', () => {
+      showNotification('Ask Aidube functionality is coming soon!', 'info');
+    });
+  }
 
   if (btnTest) {
     btnTest.addEventListener('click', async () => {

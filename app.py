@@ -1,9 +1,9 @@
 from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 from youtube_transcript_api import YouTubeTranscriptApi
+from agent import run_research_agent
 import logging
 import os
-
 app = Flask(__name__, static_folder='.', static_url_path='')
 CORS(app)
 
@@ -16,6 +16,20 @@ def index():
 @app.route('/<path:path>')
 def serve_static(path):
     return send_from_directory('.', path)
+
+@app.route('/api/research', methods=['POST'])
+def research_topic():
+    data = request.get_json()
+    if not data or 'topic' not in data:
+        return jsonify({"error": "Missing 'topic' in request body"}), 400
+    
+    topic = data['topic']
+    try:
+        result = run_research_agent(topic)
+        return jsonify(result)
+    except Exception as e:
+        logging.error(f"Error in research agent: {e}")
+        return jsonify({"error": str(e)}), 500
 
 @app.route('/transcript/<video_id>', methods=['GET'])
 def get_transcript(video_id):

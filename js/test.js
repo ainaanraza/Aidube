@@ -1,6 +1,7 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
-import { auth } from "./firebase.js";
-import { getGeminiApiKey, rotateGeminiKey, retryOperation, showNotification, checkQuota, incrementQuota, sanitizeHTML } from "./utils.js";
+import { auth, db } from "./firebase.js";
+import { doc, setDoc } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-firestore.js";
+import { getGeminiApiKey, rotateGeminiKey, retryOperation, showNotification, checkQuota, incrementQuota, sanitizeHTML, awardCredits } from "./utils.js";
 
 const urlParams = new URLSearchParams(window.location.search);
 const videoId = urlParams.get('videoId');
@@ -125,13 +126,56 @@ function submitTest() {
   let score = 0;
 
   correctAnswers.forEach((correct, index) => {
+    const allOptions = document.querySelectorAll(`input[name="q${index}"]`);
+    allOptions.forEach(opt => {
+      opt.disabled = true;
+      opt.parentElement.style.backgroundColor = '';
+      opt.parentElement.style.borderColor = '#e5e7eb';
+    });
+
     const selected = document.querySelector(`input[name="q${index}"]:checked`);
-    if (selected && parseInt(selected.value) === correct) {
-      score++;
+    const correctInput = document.querySelector(`input[name="q${index}"][value="${correct}"]`);
+
+    if (selected) {
+      if (parseInt(selected.value) === correct) {
+        score++;
+        selected.parentElement.style.backgroundColor = '#dcfce7';
+        selected.parentElement.style.borderColor = '#22c55e';
+      } else {
+        selected.parentElement.style.backgroundColor = '#fee2e2';
+        selected.parentElement.style.borderColor = '#ef4444';
+
+        if (correctInput) {
+          correctInput.parentElement.style.backgroundColor = '#dcfce7';
+          correctInput.parentElement.style.borderColor = '#22c55e';
+        }
+      }
+    } else {
+      if (correctInput) {
+        correctInput.parentElement.style.backgroundColor = '#dcfce7';
+        correctInput.parentElement.style.borderColor = '#22c55e';
+      }
     }
   });
 
+  const submitBtn = document.querySelector('button[onclick="submitTest()"]');
+  if (submitBtn) {
+    submitBtn.disabled = true;
+    submitBtn.style.opacity = '0.5';
+    submitBtn.style.cursor = 'not-allowed';
+    submitBtn.textContent = 'Submitted';
+  }
+
   showNotification(`You scored ${score} out of ${correctAnswers.length} !`, "success");
+
+  // Save to analytics in Firebase
+  const user = auth.currentUser;
+  if (user) {
+    try {
+      const docRef = doc(db, "users", user.uid, "testScores", `${videoId}_${Date.now()}`);
+      setDoc(docRef, { videoId, score, total: correctAnswers.length, date: Date.now() }, { merge: true });
+    } catch (e) { console.error(e); }
+  }
 }
 
 window.generateTest = generateTest;

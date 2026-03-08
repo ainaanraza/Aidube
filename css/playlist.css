@@ -270,6 +270,51 @@ header {
   border-radius: 10px;
 }
 
+/* Course Content Sections */
+.loading-state {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  color: var(--primary);
+  font-weight: 500;
+  font-size: 0.95rem;
+  padding: 1rem 0;
+}
+
+.concept-tags-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.concept-tag {
+  background: rgba(37, 99, 235, 0.1);
+  color: var(--primary-dark);
+  border: 1px solid rgba(37, 99, 235, 0.2);
+  padding: 0.35rem 0.85rem;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  transition: var(--transition);
+}
+
+.concept-tag:hover {
+  background: var(--primary);
+  color: white;
+  transform: translateY(-2px);
+}
+
+.transcript-notes p {
+  margin-bottom: 1.25rem;
+  line-height: 1.7;
+  color: var(--text);
+  font-size: 0.95rem;
+}
+
+.transcript-notes p:last-child {
+  margin-bottom: 0;
+}
+
 /* Responsive */
 @media (max-width: 1100px) {
   .main-content {
@@ -301,5 +346,52 @@ header {
 
   .video-thumbnail {
     width: 100%;
+  }
+
+  .back-button span {
+    display: none;
+  }
+
+  /* Smaller typography for mobile */
+  .course-header h1, #courseTitle {
+    font-size: 1.15rem !important;
+  }
+  
+  .course-intro, #courseIntro, #descText {
+    font-size: 0.75rem !important;
+  }
+
+  .action-group h3, .content-section h3 {
+    font-size: 0.85rem !important;
+  }
+
+  .action-btn {
+    font-size: 0.75rem !important;
+    padding: 0.5rem !important;
+  }
+
+  .loading-state, .transcript-notes p, #quizContent p, #lessonSummaryContent p, #keyConceptsContent p, #notesContent p {
+    font-size: 0.75rem !important;
+  }
+
+  .concept-tag {
+    font-size: 0.65rem !important;
+    padding: 0.2rem 0.5rem !important;
+  }
+
+  .header-content h1 {
+    font-size: 1.1rem !important;
+  }
+  
+  /* Native Ad Responsiveness for Mobile */
+  .ad-container-native {
+    margin: 1rem 0 !important;
+    padding: 0.5rem !important;
+    width: 100% !important;
+    box-sizing: border-box;
+  }
+  
+  .ad-container-native iframe.native-ad-iframe {
+    max-width: 100% !important;
   }
 }
