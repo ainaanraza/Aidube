@@ -666,15 +666,26 @@ button i,
   }
 
   /* Smaller typography for mobile */
-  h1, h2, h3 {
+  h1,
+  h2,
+  h3 {
     font-size: clamp(1.1rem, 5vw, 1.4rem) !important;
   }
 
-  p, span, .card-title, .saved-item-title, .history-title, input {
+  p,
+  span,
+  .card-title,
+  .saved-item-title,
+  .history-title,
+  input {
     font-size: 0.85rem !important;
   }
 
-  .btn-primary, .btn-secondary, .btn-ghost, .btn-resource, button {
+  .btn-primary,
+  .btn-secondary,
+  .btn-ghost,
+  .btn-resource,
+  button {
     font-size: 0.85rem !important;
   }
 }
@@ -965,17 +976,7 @@ button i,
     max-width: 100% !important;
   }
 
-  /* Native Ad Responsiveness for Mobile */
-  .ad-container-native {
-    margin: 1rem 0 !important;
-    padding: 0.5rem !important;
-    width: 100% !important;
-    box-sizing: border-box;
-  }
-  
-  .ad-container-native iframe.native-ad-iframe {
-    max-width: 100% !important;
-  }
+
 
   .history-thumb-wrapper {
     width: 100% !important;
