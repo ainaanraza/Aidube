@@ -82,7 +82,7 @@ async function fetchRelatedTopics(mainTopic) {
     const levelEl = document.getElementById("levelSelect");
     const level = levelEl ? levelEl.value : "beginner";
 
-    const preferredModel = "gemini-3.6-flash"; // or dynamically chosen from listModels()
+    const preferredModel = "gemini-1.5-flash"; // or dynamically chosen from listModels()
 
     // Stronger prompt to ensure relevant & capped topics
     const prompt = `List the 10 most important subtopics for learning "${mainTopic}" at a ${level} level.
@@ -158,7 +158,7 @@ async function listModels() {
   return json.models || [];
 }
 
-async function pickModel(preferred = ["gemini-3.6-flash", "gemini-flash-latest", "gemini-3.5-flash-lite"]) {
+async function pickModel(preferred = ["gemini-1.5-flash", "gemini-1.5-pro"]) {
   try {
     const models = await listModels();
     // model entries vary, but each has a 'name' or 'model' field; be flexible:
@@ -244,7 +244,7 @@ async function generateRoadmap(topic) {
 
     const result = await retryOperation(async () => {
       const genAI = new GoogleGenerativeAI(await getGeminiApiKey());
-      const model = genAI.getGenerativeModel({ model: "gemini-3.6-flash" });
+      const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
       return await model.generateContent(prompt);
     }, 5, 1000, () => {
       console.warn("generateRoadmap API limit hit, rotating key...");

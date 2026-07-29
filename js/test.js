@@ -38,14 +38,14 @@ async function generateTest() {
       const genAI = new GoogleGenerativeAI(await getGeminiApiKey());
 
       try {
-        const model = genAI.getGenerativeModel({ model: "gemini-3.6-flash" });
+        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
         return await model.generateContent({
           contents: [{ role: "user", parts: [{ text: prompt }] }],
           generationConfig: { maxOutputTokens: 2000 }
         });
       } catch (err) {
         if (err.message.includes('404') || err.message.includes('503')) {
-          const fallbackModel = genAI.getGenerativeModel({ model: "gemini-3.5-flash" });
+          const fallbackModel = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
           return await fallbackModel.generateContent({
             contents: [{ role: "user", parts: [{ text: prompt }] }],
             generationConfig: { maxOutputTokens: 2000 }
