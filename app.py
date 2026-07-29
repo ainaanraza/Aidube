@@ -34,6 +34,7 @@ def research_topic():
 @app.route('/api/config', methods=['GET'])
 def get_config():
     env_keys_str = os.environ.get("GEMINI_API_KEYS", os.environ.get("GEMINI_API_KEY", ""))
+    env_keys_str = env_keys_str.replace('"', '').replace("'", "")
     keys = [k.strip() for k in env_keys_str.split(",") if k.strip()]
     return jsonify({"gemini_keys": keys}), 200
 

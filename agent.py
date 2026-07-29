@@ -14,6 +14,7 @@ logger = logging.getLogger(__name__)
 
 # Fallback pool of API keys to prevent Quota Exhaustion limits
 env_keys_str = os.getenv("GEMINI_API_KEYS", os.getenv("GEMINI_API_KEY", ""))
+env_keys_str = env_keys_str.replace('"', '').replace("'", "")
 GEMINI_API_KEYS = [k.strip() for k in env_keys_str.split(",") if k.strip()]
 
 # Filter out None and remove duplicates while preserving order
