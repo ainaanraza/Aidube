@@ -24,15 +24,21 @@ async function ensureConfig() {
         const apiUrl = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
             ? 'http://localhost:5000/api/config' 
             : '/api/config';
+        console.log("Fetching API config from:", apiUrl);
         const res = await fetch(apiUrl);
         if (res.ok) {
             const data = await res.json();
             if (data.gemini_keys && data.gemini_keys.length > 0) {
+                console.log("Successfully fetched config with", data.gemini_keys.length, "keys.");
                 GEMINI_API_KEYS = data.gemini_keys;
+            } else {
+                console.warn("Config fetched but no keys found in response:", data);
             }
+        } else {
+            console.warn(`Server responded with ${res.status}: ${res.statusText}`);
         }
     } catch (e) {
-        console.warn("Could not fetch config from server, using fallback keys");
+        console.error("Network Error: Could not fetch config from server. Using fallback keys. Are you running the Flask backend? Error:", e);
     }
     configFetched = true;
 }
