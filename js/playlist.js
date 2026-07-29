@@ -458,7 +458,7 @@ async function generateUsingGemini(prompt, opts = {}) {
 
     try {
       // Try the newer model first (matching test.js behavior)
-      const modelName = opts.model || 'gemini-2.5-flash';
+      const modelName = opts.model || 'gemini-3.6-flash';
       const model = genAI.getGenerativeModel({ model: modelName });
 
       const result = await model.generateContent({
@@ -474,7 +474,7 @@ async function generateUsingGemini(prompt, opts = {}) {
       // Fallback for 404 (model not found) or 503 (service unavailable)
       if (err.message.includes('404') || err.message.includes('503')) {
         // console.warn removed
-        const fallbackModelName = 'gemini-1.5-flash';
+        const fallbackModelName = 'gemini-3.5-flash';
         const fallbackModel = genAI.getGenerativeModel({ model: fallbackModelName });
         const result = await fallbackModel.generateContent({
           contents: [{ role: "user", parts: [{ text: prompt }] }],
