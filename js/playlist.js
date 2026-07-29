@@ -454,7 +454,7 @@ async function populateLessonContent(videoId, videoTitle) {
 
 async function generateUsingGemini(prompt, opts = {}) {
   return await retryOperation(async () => {
-    const genAI = new GoogleGenerativeAI(getGeminiApiKey());
+    const genAI = new GoogleGenerativeAI(await getGeminiApiKey());
 
     try {
       // Try the newer model first (matching test.js behavior)

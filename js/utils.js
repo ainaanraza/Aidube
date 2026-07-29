@@ -8,13 +8,34 @@ const YOUTUBE_API_KEYS = [
     "AIzaSyDrdKBBnrBCPqHKkyR3DRHt7EIyf_-mq3U"
 ];
 
-const GEMINI_API_KEYS = [
+let GEMINI_API_KEYS = [
     "AIzaSyCxmH2scV8KDS3TTKju8YnRSQdsOjmbyMI",
     "AIzaSyAXh5mE52qyJuIyv8QjMpx6CRWQb363wZ0",
     "AIzaSyDzmaqaK8K-VQrdlfA2L8j3af6wZ06HH4w",
     "AIzaSyAcaoCV_IhsD61HrYWewecC0Mpeys0LrbE",
     "AIzaSyCokZX00LfxiJ6XSukz2Ajd9T6Zk-N_USo"
 ];
+
+let configFetched = false;
+
+async function ensureConfig() {
+    if (configFetched) return;
+    try {
+        const apiUrl = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
+            ? 'http://localhost:5000/api/config' 
+            : '/api/config';
+        const res = await fetch(apiUrl);
+        if (res.ok) {
+            const data = await res.json();
+            if (data.gemini_keys && data.gemini_keys.length > 0) {
+                GEMINI_API_KEYS = data.gemini_keys;
+            }
+        }
+    } catch (e) {
+        console.warn("Could not fetch config from server, using fallback keys");
+    }
+    configFetched = true;
+}
 
 let currentYouTubeKeyIndex = 0;
 let currentGeminiKeyIndex = 0;
@@ -28,7 +49,8 @@ export function rotateYouTubeKey() {
     // Rotating YouTube API Key
 }
 
-export function getGeminiApiKey() {
+export async function getGeminiApiKey() {
+    await ensureConfig();
     return GEMINI_API_KEYS[currentGeminiKeyIndex];
 }
 

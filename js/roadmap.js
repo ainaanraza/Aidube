@@ -89,7 +89,7 @@ async function fetchRelatedTopics(mainTopic) {
 Return ONLY the subtopic names, one per line, no numbering, no explanations.`;
 
     const result = await retryOperation(async () => {
-      const genAI = new GoogleGenerativeAI(getGeminiApiKey());
+      const genAI = new GoogleGenerativeAI(await getGeminiApiKey());
       const model = genAI.getGenerativeModel({ model: preferredModel });
       return await model.generateContent(prompt);
     }, 5, 1000, () => {
@@ -115,7 +115,7 @@ Return ONLY the subtopic names, one per line, no numbering, no explanations.`;
 Only names, one per line, no numbering, no extra text.`;
 
       const retryResult = await retryOperation(async () => {
-        const genAI = new GoogleGenerativeAI(getGeminiApiKey());
+        const genAI = new GoogleGenerativeAI(await getGeminiApiKey());
         const model = genAI.getGenerativeModel({ model: preferredModel });
         return await model.generateContent(strictPrompt);
       }, 5, 1000, () => {
@@ -143,9 +143,10 @@ Only names, one per line, no numbering, no extra text.`;
 
 // call the models listing (v1beta) to see what model names the API currently exposes
 async function listModels() {
-  const url = "https://generativelanguage.googleapis.com/v1beta/models?key=" + getGeminiApiKey();
+  const apiKey = await getGeminiApiKey();
+  const url = "https://generativelanguage.googleapis.com/v1beta/models?key=" + apiKey;
   const res = await fetch(url, {
-    headers: { "x-goog-api-key": getGeminiApiKey(), "Content-Type": "application/json" }
+    headers: { "x-goog-api-key": apiKey, "Content-Type": "application/json" }
   });
   if (!res.ok) {
     const txt = await res.text();
@@ -242,7 +243,7 @@ async function generateRoadmap(topic) {
     prompt += " Provide the roadmap as short ordered/bullet steps, each on a new line.";
 
     const result = await retryOperation(async () => {
-      const genAI = new GoogleGenerativeAI(getGeminiApiKey());
+      const genAI = new GoogleGenerativeAI(await getGeminiApiKey());
       const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
       return await model.generateContent(prompt);
     }, 5, 1000, () => {

@@ -82,7 +82,7 @@ document.addEventListener("DOMContentLoaded", () => {
         let lastError = null;
         for (let i = 0; i < 5; i++) {
             try {
-                const genAI = new GoogleGenerativeAI(getGeminiApiKey());
+                const genAI = new GoogleGenerativeAI(await getGeminiApiKey());
                 const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
                 const prompt = `You are an AI research assistant. Provide a comprehensive educational summary about "${searchTopic}". 

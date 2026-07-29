@@ -35,7 +35,7 @@ async function generateTest() {
 
     const result = await retryOperation(async () => {
       // Initialize with CURRENT key
-      const genAI = new GoogleGenerativeAI(getGeminiApiKey());
+      const genAI = new GoogleGenerativeAI(await getGeminiApiKey());
 
       try {
         const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });

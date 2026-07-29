@@ -31,6 +31,12 @@ def research_topic():
         logging.error(f"Error in research agent: {e}")
         return jsonify({"error": str(e)}), 500
 
+@app.route('/api/config', methods=['GET'])
+def get_config():
+    env_keys_str = os.environ.get("GEMINI_API_KEYS", os.environ.get("GEMINI_API_KEY", ""))
+    keys = [k.strip() for k in env_keys_str.split(",") if k.strip()]
+    return jsonify({"gemini_keys": keys}), 200
+
 @app.route('/transcript/<video_id>', methods=['GET'])
 def get_transcript(video_id):
     try:
