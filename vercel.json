@@ -2,19 +2,19 @@
   "rewrites": [
     {
       "source": "/api/config",
-      "destination": "/api/index.py"
+      "destination": "/api/index"
     },
     {
       "source": "/api/research",
-      "destination": "/api/index.py"
+      "destination": "/api/index"
     },
     {
       "source": "/transcript/:path*",
-      "destination": "/api/index.py"
+      "destination": "/api/index"
     },
     {
       "source": "/verify-recaptcha",
-      "destination": "/api/index.py"
+      "destination": "/api/index"
     }
   ],
   "headers": [
