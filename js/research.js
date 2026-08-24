@@ -83,7 +83,7 @@ document.addEventListener("DOMContentLoaded", () => {
         for (let i = 0; i < 5; i++) {
             try {
                 const genAI = new GoogleGenerativeAI(await getGeminiApiKey());
-                const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+                const model = genAI.getGenerativeModel({ model: "gemini-3.6-flash" });
 
                 const prompt = `You are an AI research assistant. Provide a comprehensive educational summary about "${searchTopic}". 
 Respond ONLY with a valid JSON document containing two keys:

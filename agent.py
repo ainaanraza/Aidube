@@ -58,7 +58,7 @@ def run_research_agent(topic):
             logger.info(f"Trying Gemini API key {idx + 1}/{len(GEMINI_API_KEYS)}...")
             client = genai.Client(api_key=key)
             response = client.models.generate_content(
-                model='gemini-1.5-flash',
+                model='gemini-3.6-flash',
                 contents=prompt,
                 config=types.GenerateContentConfig(
                     tools=[{"google_search": {}}],
