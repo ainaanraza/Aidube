@@ -51,10 +51,10 @@ def fetch_from_invidious(video_id):
     instances = INVIDIOUS_INSTANCES.copy()
     random.shuffle(instances)
     
-    for instance in instances:
+    for instance in instances[:2]:
         try:
             # 1. Get Captions List
-            resp = requests.get(f"{instance}/api/v1/captions/{video_id}", timeout=5)
+            resp = requests.get(f"{instance}/api/v1/captions/{video_id}", timeout=2.5)
             if resp.status_code != 200:
                 continue
             
@@ -76,7 +76,7 @@ def fetch_from_invidious(video_id):
                     track_url = f"{instance}{first_track['url']}&tlang=en"
             
             if track_url:
-                track_resp = requests.get(track_url, timeout=10)
+                track_resp = requests.get(track_url, timeout=2.5)
                 if track_resp.status_code == 200:
                     return clean_vtt(track_resp.text)
         except Exception as e:
