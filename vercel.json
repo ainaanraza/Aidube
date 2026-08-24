@@ -1,6 +1,14 @@
 {
   "rewrites": [
     {
+      "source": "/api/config",
+      "destination": "/api/index.py"
+    },
+    {
+      "source": "/api/research",
+      "destination": "/api/index.py"
+    },
+    {
       "source": "/transcript/:path*",
       "destination": "/api/index.py"
     },

@@ -6,6 +6,7 @@ import os
 import requests
 import re
 import random
+from agent import run_research_agent
 
 app = Flask(__name__)
 CORS(app)
@@ -236,3 +237,17 @@ def get_config():
     env_keys_str = env_keys_str.replace('"', '').replace("'", "")
     keys = [k.strip() for k in env_keys_str.split(",") if k.strip()]
     return jsonify({"gemini_keys": keys}), 200
+
+@app.route('/api/research', methods=['POST'])
+def research_topic():
+    data = request.get_json()
+    if not data or 'topic' not in data:
+        return jsonify({"error": "Missing 'topic' in request body"}), 400
+    
+    topic = data['topic']
+    try:
+        result = run_research_agent(topic)
+        return jsonify(result)
+    except Exception as e:
+        logging.error(f"Error in research agent: {e}")
+        return jsonify({"error": str(e)}), 500
