@@ -458,7 +458,7 @@ async function generateUsingGemini(prompt, opts = {}) {
 
     try {
       // Try the newer model first (matching test.js behavior)
-      const modelName = opts.model || 'gemini-1.5-flash';
+      const modelName = opts.model || 'gemini-1.5-flash-latest';
       const model = genAI.getGenerativeModel({ model: modelName });
 
       const result = await model.generateContent({
