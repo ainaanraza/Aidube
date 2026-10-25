@@ -149,16 +149,17 @@ export function classifyGeminiError(status, errBody = {}) {
     };
   }
 
-  // 3. Model not found or unsupported model configuration (Model error, not key error)
+  // 3. Model not found, unsupported model configuration, or model-specific high demand overload
   if (
     status === 404 ||
-    (status === 400 && (message.includes("model") || message.includes("not found")))
+    (status === 400 && (message.includes("model") || message.includes("not found"))) ||
+    (status === 503 && (message.includes("high demand") || (message.includes("model") && message.includes("demand"))))
   ) {
     return {
       retryableWithKey: false,
       reason: "MODEL_ERROR",
       isModelError: true,
-      message: errorObj.message || "Requested Gemini model is unavailable."
+      message: errorObj.message || "Requested Gemini model is unavailable or overloaded."
     };
   }
 

@@ -108,10 +108,14 @@ describe("Security Controls: Input Validation & Sanitization", () => {
     assert.strictEqual(invalidGen.valid, false);
   });
 
-  it("should normalize legacy/deprecated model names to official stable models", () => {
-    const result = validateGeminiInput({ action: "generate", prompt: "Test prompt", model: "gemini-3.6-flash" });
-    assert.strictEqual(result.valid, true);
-    assert.strictEqual(result.data.model, "gemini-1.5-flash");
+  it("should normalize unknown/unsupported model names to official stable modern models", () => {
+    const validResult = validateGeminiInput({ action: "generate", prompt: "Test prompt", model: "gemini-3.8-flash" });
+    assert.strictEqual(validResult.valid, true);
+    assert.strictEqual(validResult.data.model, "gemini-3.8-flash");
+
+    const fallbackResult = validateGeminiInput({ action: "generate", prompt: "Test prompt", model: "unsupported-model-xyz" });
+    assert.strictEqual(fallbackResult.valid, true);
+    assert.strictEqual(fallbackResult.data.model, "gemini-3.8-flash");
   });
 
   it("should enforce maximum payload size (64KB)", () => {

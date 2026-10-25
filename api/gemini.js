@@ -15,17 +15,21 @@ import { checkRateLimit } from "./_lib/rateLimit.js";
 import { validateGeminiInput, checkPayloadSize, ALLOWED_GEMINI_MODELS } from "./_lib/validation.js";
 
 // Executes upstream Gemini generateContent request with server-side key rotation and timeout
-export async function callGeminiApi({ prompt, model = "gemini-1.5-flash", maxOutputTokens = 2000, temperature = 0.2, responseMimeType = null }) {
+export async function callGeminiApi({ prompt, model = "gemini-3.8-flash", maxOutputTokens = 2000, temperature = 0.2, responseMimeType = null }) {
   const allKeys = getGeminiKeys();
   if (allKeys.length === 0) {
     throw new Error("GEMINI_API_KEY is not configured on the server.");
   }
 
-  // Candidate models and versions: try v1beta and stable v1
+  // Candidate models: prioritize requested model, then high-reliability 3.x models, then fallbacks
   const candidateModels = [
-    model || "gemini-1.5-flash",
-    "gemini-1.5-flash",
+    model || "gemini-3.8-flash",
+    "gemini-3.8-flash",
+    "gemini-3.6-flash",
+    "gemini-3.5-flash",
+    "gemini-3.1-flash-lite",
     "gemini-2.0-flash",
+    "gemini-1.5-flash",
     "gemini-1.5-pro"
   ].filter((m, idx, arr) => arr.indexOf(m) === idx);
 
@@ -84,14 +88,16 @@ export async function callGeminiApi({ prompt, model = "gemini-1.5-flash", maxOut
         const errJson = await response.json().catch(() => ({}));
         const classification = classifyGeminiError(response.status, errJson);
 
+        // If the model is not found, deprecated, unsupported, or overloaded:
+        // Fall through to try the next candidate model in the chain!
         if (classification.isModelError) {
           modelAvailable = false;
-          lastError = new Error(classification.message);
-          break; // Break inner loop, try next candidate model
+          lastError = new Error(classification.message || `Model ${currentModel} returned error`);
+          break; // Break inner loop across keys for this model, try next candidate model
         }
 
         if (!classification.retryableWithKey) {
-          // Non-retryable error (e.g. client error or upstream 5xx temporary outage)
+          // Non-retryable client error (e.g. invalid request format)
           // DO NOT burn remaining keys!
           const unretryableErr = new Error(scrubSecrets(classification.message));
           unretryableErr.isNonRetryable = true;
@@ -112,8 +118,8 @@ export async function callGeminiApi({ prompt, model = "gemini-1.5-flash", maxOut
       }
     }
 
-    if (modelAvailable && lastError && !lastError.message?.includes("model")) {
-      // If the model was valid but keys were exhausted/invalid, do not repeat failed keys across models
+    if (modelAvailable && lastError && (lastError.message?.includes("invalid or unauthorized") || lastError.message?.includes("quota"))) {
+      // If all keys were exhausted or invalid across this model, stop trying other models with same broken keys
       break;
     }
   }

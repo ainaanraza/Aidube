@@ -57,10 +57,16 @@ export function checkPayloadSize(req, maxBytes = 65536) {
 
 export const ALLOWED_GEMINI_ACTIONS = ["generate", "test", "roadmap", "subtopics", "research", "models"];
 export const ALLOWED_GEMINI_MODELS = [
+  "gemini-3.8-flash",
+  "gemini-3.7-flash",
+  "gemini-3.6-flash",
+  "gemini-3.5-flash",
+  "gemini-3.1-flash-lite",
+  "gemini-2.5-flash",
+  "gemini-2.0-flash",
   "gemini-1.5-flash",
   "gemini-1.5-flash-8b",
-  "gemini-1.5-pro",
-  "gemini-2.0-flash"
+  "gemini-1.5-pro"
 ];
 
 export function validateGeminiInput(body) {
@@ -73,14 +79,14 @@ export function validateGeminiInput(body) {
     return { valid: false, error: `Invalid action. Supported actions: ${ALLOWED_GEMINI_ACTIONS.join(", ")}` };
   }
 
-  let model = "gemini-1.5-flash";
+  let model = "gemini-3.8-flash";
   if (body.model && typeof body.model === "string") {
-    let requested = body.model.trim();
-    // Use valid official model, or gracefully normalize any fictional/unsupported name (e.g. gemini-3.8-flash)
+    let requested = body.model.trim().toLowerCase();
+    // Normalize to requested model if allowed, else fallback to default modern model
     if (ALLOWED_GEMINI_MODELS.includes(requested)) {
       model = requested;
     } else {
-      model = "gemini-1.5-flash";
+      model = "gemini-3.8-flash";
     }
   }
 

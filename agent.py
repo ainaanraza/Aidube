@@ -54,7 +54,7 @@ def run_research_agent(topic):
     last_error = None
     
     for idx, key in enumerate(GEMINI_API_KEYS):
-        for candidate_model in ['gemini-1.5-flash', 'gemini-2.0-flash', 'gemini-1.5-pro']:
+        for candidate_model in ['gemini-3.8-flash', 'gemini-3.6-flash', 'gemini-3.5-flash', 'gemini-3.1-flash-lite', 'gemini-2.0-flash', 'gemini-1.5-flash']:
             try:
                 client = genai.Client(api_key=key)
                 response = client.models.generate_content(
