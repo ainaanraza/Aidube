@@ -42,9 +42,10 @@ function createMockRes() {
 
 describe("Security Controls: Secret Scrubbing", () => {
   it("should redact Google AIzaSy keys from strings", () => {
-    const raw = "Error calling https://generativelanguage.googleapis.com?key=AIzaSyB8qZ_7Z7miBrUeo2cRDE6aPwyhe5TVCo8 failed";
+    const mockKey = "AIzaSy" + "MockKeyForScrubbingTestOnly12345";
+    const raw = `Error calling https://generativelanguage.googleapis.com?key=${mockKey} failed`;
     const scrubbed = scrubSecrets(raw);
-    assert.strictEqual(scrubbed.includes("AIzaSyB8qZ_7Z7miBrUeo2cRDE6aPwyhe5TVCo8"), false);
+    assert.strictEqual(scrubbed.includes(mockKey), false);
     assert.ok(scrubbed.includes("[REDACTED_API_KEY]") || scrubbed.includes("[REDACTED]"));
   });
 
