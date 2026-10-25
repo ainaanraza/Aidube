@@ -15,22 +15,23 @@ import { checkRateLimit } from "./_lib/rateLimit.js";
 import { validateGeminiInput, checkPayloadSize, ALLOWED_GEMINI_MODELS } from "./_lib/validation.js";
 
 // Executes upstream Gemini generateContent request with server-side key rotation and timeout
-export async function callGeminiApi({ prompt, model = "gemini-3.8-flash", maxOutputTokens = 2000, temperature = 0.2, responseMimeType = null }) {
+export async function callGeminiApi({ prompt, model = "gemini-3.1-flash-lite", maxOutputTokens = 2000, temperature = 0.2, responseMimeType = null }) {
   const allKeys = getGeminiKeys();
   if (allKeys.length === 0) {
     throw new Error("GEMINI_API_KEY is not configured on the server.");
   }
 
-  // Candidate models: prioritize requested model, then high-reliability 3.x models, then fallbacks
+  // Candidate models: prioritize requested model, then models with active quotas and zero-latency
   const candidateModels = [
-    model || "gemini-3.8-flash",
-    "gemini-3.8-flash",
-    "gemini-3.6-flash",
-    "gemini-3.5-flash",
+    model || "gemini-3.1-flash-lite",
     "gemini-3.1-flash-lite",
+    "gemini-3.1-flash-lite-preview",
+    "gemini-3.5-flash",
+    "gemini-3.6-flash",
+    "gemini-3.8-flash",
+    "gemini-3.7-flash",
     "gemini-2.0-flash",
-    "gemini-1.5-flash",
-    "gemini-1.5-pro"
+    "gemini-1.5-flash"
   ].filter((m, idx, arr) => arr.indexOf(m) === idx);
 
   const candidateEndpoints = [];
@@ -59,7 +60,10 @@ export async function callGeminiApi({ prompt, model = "gemini-3.8-flash", maxOut
         ],
         generationConfig: {
           temperature,
-          maxOutputTokens
+          maxOutputTokens,
+          thinkingConfig: {
+            thinkingBudget: 0
+          }
         }
       };
 
@@ -74,7 +78,7 @@ export async function callGeminiApi({ prompt, model = "gemini-3.8-flash", maxOut
             "Content-Type": "application/json"
           },
           body: JSON.stringify(requestBody),
-          signal: AbortSignal.timeout(9000) // 9-second timeout
+          signal: AbortSignal.timeout(18000) // 18-second timeout
         });
 
         if (response.ok) {
@@ -96,6 +100,13 @@ export async function callGeminiApi({ prompt, model = "gemini-3.8-flash", maxOut
           break; // Break inner loop across keys for this model, try next candidate model
         }
 
+        // If this specific model exceeded its daily free tier quota (429), try next candidate model
+        if (response.status === 429 && errJson?.error?.message?.includes("model:")) {
+          modelAvailable = false;
+          lastError = new Error(classification.message || `Model ${currentModel} quota exceeded`);
+          break;
+        }
+
         if (!classification.retryableWithKey) {
           // Non-retryable client error (e.g. invalid request format)
           // DO NOT burn remaining keys!
@@ -114,7 +125,9 @@ export async function callGeminiApi({ prompt, model = "gemini-3.8-flash", maxOut
           throw err;
         }
         lastError = err;
-        markKeyExhausted("gemini", apiKey);
+        if (err.name !== "TimeoutError" && err.name !== "AbortError") {
+          markKeyExhausted("gemini", apiKey);
+        }
       }
     }
 
