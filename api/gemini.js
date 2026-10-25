@@ -305,6 +305,15 @@ CRITICAL INSTRUCTIONS:
     if (error.name === "TimeoutError" || error.message?.includes("timeout")) {
       return sendSafeError(res, 504, "AI request timed out. Please try again.", error);
     }
-    return sendSafeError(res, 500, "AI operation failed. Please try again later.", error);
+    if (error.message?.includes("is not configured")) {
+      return sendSafeError(res, 500, "GEMINI_API_KEY is not configured in Vercel environment variables.", error);
+    }
+    if (error.message?.includes("quota") || error.message?.includes("exhausted")) {
+      return sendSafeError(res, 429, "Gemini API quota exceeded on server. Please check your Gemini quota or add backup keys.", error);
+    }
+    if (error.message?.includes("key") && (error.message?.includes("invalid") || error.message?.includes("unauthorized"))) {
+      return sendSafeError(res, 401, "Configured GEMINI_API_KEY is invalid or unauthorized in Google Cloud.", error);
+    }
+    return sendSafeError(res, 500, "AI operation failed. Please check server logs for details.", error);
   }
 }

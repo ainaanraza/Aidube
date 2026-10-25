@@ -261,6 +261,15 @@ export default async function handler(req, res) {
     if (error.name === "TimeoutError" || error.message?.includes("timeout")) {
       return sendSafeError(res, 504, "YouTube request timed out. Please try again.", error);
     }
+    if (error.message?.includes("is not configured")) {
+      return sendSafeError(res, 500, "YOUTUBE_API_KEY is not configured in Vercel environment variables.", error);
+    }
+    if (error.message?.includes("quota") || error.message?.includes("exhausted")) {
+      return sendSafeError(res, 429, "YouTube API quota exceeded on server.", error);
+    }
+    if (error.message?.includes("key") && (error.message?.includes("invalid") || error.message?.includes("unauthorized"))) {
+      return sendSafeError(res, 401, "Configured YOUTUBE_API_KEY is invalid in Google Cloud.", error);
+    }
     return sendSafeError(res, 500, "Failed to retrieve YouTube data. Please try again later.", error);
   }
 }
