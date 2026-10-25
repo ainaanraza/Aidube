@@ -20,7 +20,7 @@ export async function callGeminiApi({ prompt, model = "gemini-1.5-flash", maxOut
     throw new Error("GEMINI_API_KEY is not configured on the server.");
   }
 
-  // Model fallback chain: requested model -> official stable models
+  // Candidate models and versions: try v1beta and stable v1
   const candidateModels = [
     model || "gemini-1.5-flash",
     "gemini-1.5-flash",
@@ -28,16 +28,22 @@ export async function callGeminiApi({ prompt, model = "gemini-1.5-flash", maxOut
     "gemini-1.5-pro"
   ].filter((m, idx, arr) => arr.indexOf(m) === idx);
 
+  const candidateEndpoints = [];
+  for (const m of candidateModels) {
+    candidateEndpoints.push({ model: m, version: "v1beta" });
+    candidateEndpoints.push({ model: m, version: "v1" });
+  }
+
   const rotatingKeys = getRotatingKeys("gemini");
   const maxAttempts = Math.min(rotatingKeys.length, 3);
   let lastError = null;
 
-  for (const currentModel of candidateModels) {
+  for (const { model: currentModel, version } of candidateEndpoints) {
     let modelAvailable = true;
 
     for (let i = 0; i < maxAttempts; i++) {
       const apiKey = rotatingKeys[i];
-      const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${currentModel}:generateContent?key=${apiKey}`;
+      const endpoint = `https://generativelanguage.googleapis.com/${version}/models/${currentModel}:generateContent?key=${apiKey}`;
 
       const requestBody = {
         contents: [
