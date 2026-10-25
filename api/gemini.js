@@ -30,8 +30,7 @@ export async function callGeminiApi({ prompt, model = "gemini-3.1-flash-lite", m
     "gemini-3.6-flash",
     "gemini-3.8-flash",
     "gemini-3.7-flash",
-    "gemini-2.0-flash",
-    "gemini-1.5-flash"
+    "gemini-2.5-flash"
   ].filter((m, idx, arr) => arr.indexOf(m) === idx);
 
   const candidateEndpoints = [];
@@ -339,17 +338,20 @@ CRITICAL INSTRUCTIONS:
     }
   } catch (error) {
     if (error.name === "TimeoutError" || error.message?.includes("timeout")) {
-      return sendSafeError(res, 504, "AI request timed out. Please try again.", error);
+      return sendSafeError(res, 504, "The AI request took a little too long. Please try again.", error);
     }
     if (error.message?.includes("is not configured")) {
-      return sendSafeError(res, 500, "GEMINI_API_KEY is not configured in Vercel environment variables.", error);
+      return sendSafeError(res, 500, "AI service configuration in progress. Please check back shortly.", error);
     }
     if (error.message?.includes("quota") || error.message?.includes("exhausted")) {
-      return sendSafeError(res, 429, "Gemini API quota exceeded on server. Please check your Gemini quota or add backup keys.", error);
+      return sendSafeError(res, 429, "Daily generation limit reached. Please try again later or add more credits.", error);
     }
     if (error.message?.includes("key") && (error.message?.includes("invalid") || error.message?.includes("unauthorized"))) {
-      return sendSafeError(res, 401, "Configured GEMINI_API_KEY is invalid or unauthorized in Google Cloud.", error);
+      return sendSafeError(res, 401, "AI authentication error. Please refresh and try again.", error);
     }
-    return sendSafeError(res, 500, scrubSecrets(error.message) || "AI operation failed.", error);
+    if (error.message?.includes("model") || error.message?.includes("found") || error.message?.includes("support")) {
+      return sendSafeError(res, 503, "The AI service is currently busy. Please try again in a moment.", error);
+    }
+    return sendSafeError(res, 500, "Unable to generate content at this moment. Please try again shortly.", error);
   }
 }

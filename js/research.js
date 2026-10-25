@@ -1,4 +1,4 @@
-import { callGeminiApi } from "./utils.js";
+import { callGeminiApi, formatUserFriendlyError } from "./utils.js";
 import { auth } from "./firebase.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-auth.js";
 
@@ -42,7 +42,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         } catch (error) {
             console.error("Research Error:", error);
-            showError("Failed to generate research: " + error.message);
+            showError(formatUserFriendlyError(error));
         }
     }
 

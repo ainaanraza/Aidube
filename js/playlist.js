@@ -1,6 +1,6 @@
 import { auth, db } from "./firebase.js";
 import { setDoc, doc, getDoc, deleteDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-firestore.js";
-import { callYouTubeApi, callGeminiApi, isValidPlaylistId, retryOperation, showNotification, checkQuota, incrementQuota, sanitizeHTML, trackVideoCompletion, awardCredits } from "./utils.js";
+import { callYouTubeApi, callGeminiApi, isValidPlaylistId, retryOperation, showNotification, checkQuota, incrementQuota, sanitizeHTML, trackVideoCompletion, awardCredits, formatUserFriendlyError } from "./utils.js";
 
 
 const urlParams = new URLSearchParams(window.location.search);
@@ -18,8 +18,10 @@ firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
 
 let ytPlayer;
 
-// Current playlist title state
+// Current state
 let currentPlaylistTitle = "Unknown Playlist";
+let currentPlayingVideoId = lastVideoId || null;
+let currentPlayingVideoTitle = "Current Lesson";
 
 async function loadPlaylist(pageToken = "") {
   try {
@@ -124,6 +126,8 @@ function displayVideos(videos, isFirstPage = true, totalResults = null) {
 }
 
 async function playVideo(videoId, videoTitle) {
+  currentPlayingVideoId = videoId;
+  currentPlayingVideoTitle = videoTitle;
   videoPlayer.innerHTML = `<div id="yt-player-container"></div>`;
 
   const titleEl = document.getElementById("courseTitle");
@@ -453,7 +457,7 @@ async function generateUsingGemini(prompt, opts = {}) {
 function createStyledPdf(title, text, shortName = 'notes') {
   try {
     const { jsPDF } = window.jspdf || {};
-    if (!jsPDF) throw new Error('jsPDF not found');
+    if (!jsPDF) throw new Error('PDF generator library not loaded. Please refresh the page.');
     const doc = new jsPDF({ unit: 'pt', format: 'letter' });
 
     const pageWidth = doc.internal.pageSize.getWidth();
@@ -484,8 +488,10 @@ function createStyledPdf(title, text, shortName = 'notes') {
     doc.setFontSize(11);
     doc.setTextColor(20, 20, 20);
 
-    // Parse simple markdown
-    const lines = text.split('\n');
+    // Parse simple markdown safely
+    const rawContent = typeof text === 'string' ? text : (text?.text || '');
+    const cleanContent = rawContent.trim() || 'No content generated.';
+    const lines = cleanContent.split('\n');
 
     for (let i = 0; i < lines.length; i++) {
       let line = lines[i].trim();
@@ -532,22 +538,15 @@ function createStyledPdf(title, text, shortName = 'notes') {
       }
 
       // 2. BOLD TEXT (**text**)
-      // Simple parser: assumes one bold section per line or splits by bold syntax
-      // We'll split the line by ** to handle inline bolding
       const parts = line.split('**');
       let currentX = margin;
 
-      // Identify if it's a bullet point
       if (line.startsWith('- ') || line.startsWith('* ')) {
         parts[0] = parts[0].replace(/^[-*]\s+/, '');
-        // Draw bullet
         doc.text('\u2022', margin - 15, cursorY);
       }
 
       for (let j = 0; j < parts.length; j++) {
-        // Even indexes are normal, odd are bold (if input is **bold** text)
-        // Example: "Normal " "Bold" " Normal"
-
         const segment = parts[j];
         if (!segment) continue;
 
@@ -557,48 +556,16 @@ function createStyledPdf(title, text, shortName = 'notes') {
           doc.setFont("helvetica", "normal");
         }
 
-        // Helper to wrap text manually if it exceeds line width
-        // This is complex for inline rendering. 
-        // Simplified approach: Render line by line using simple text logic won't wrap correctly inline.
-        // Better approach for PDF: use splitTextToSize for the whole line if not bold, 
-        // but for mixed styles, we need to calculate widths.
-
-        // FALLBACK FOR ROBUSTNESS: 
-        // If the line is long, just print it normally. 
-        // If it's short headers/labels, bold works well.
-        // For this implementation, we will apply bold to the whole segment and just wrap.
-        // Note: This simple loop doesn't handle wrapping of mixed flows perfectly.
-
-        // Let's rely on standard splitTextToSize for the segment, but update X.
-        // Actually, properly mixing styles in jsPDF requires advanced coordinates.
-        // Simplified: If the *whole line* looks like a key-value pair "Key: Value", bold the Key.
-        // Or just print the segments.
-
-        // We'll just write the text. If it overflows, it might look messy with this simple logic.
-        // Let's stick to a simpler implementation:
-        // If a line contains **, just remove ** and make the WHOLE line bold if it looks like a header/key,
-        // OR just print it as normal text but strip the **.
-        // The USER ASKED for bold headings. The Header parsing above handles # Headers.
-        // But usually "1. **Main Argument**" needs bolding.
-
-        // REVISED STRATEGY for bold parts:
-        // Just print the text plain for complex lines to avoid overlap, 
-        // BUT if the specific segment is short, print it.
-
         const segmentLines = doc.splitTextToSize(segment, maxLineWidth - (currentX - margin));
 
-        // If it's just one line, we print inline
         if (segmentLines.length === 1) {
           doc.text(segment, currentX, cursorY);
           currentX += doc.getTextWidth(segment);
         } else {
-          // Multiline - just formatting the whole block potentially
-          // Check if we are at start of line
           if (currentX === margin) {
             doc.text(segmentLines, margin, cursorY);
             cursorY += (segmentLines.length * 14);
           } else {
-            // Push to next line if doesn't fit
             cursorY += 14;
             currentX = margin;
             const newLines = doc.splitTextToSize(segment, maxLineWidth);
@@ -614,55 +581,81 @@ function createStyledPdf(title, text, shortName = 'notes') {
     const filename = `${shortName.replace(/\s+/g, '_')}_${Date.now()}.pdf`;
     doc.save(filename);
   } catch (e) {
-    alert('PDF creation failed: ' + e.message);
+    showNotification('PDF creation failed: ' + formatUserFriendlyError(e), 'error');
   }
 }
 
 async function handleGenerateDocument(type, btnElement) {
+  // 1. Immediate loading feedback and double-click prevention
+  if (btnElement) {
+    if (btnElement.disabled) return;
+    btnElement.disabled = true;
+    btnElement.dataset.originalText = btnElement.innerHTML;
+    btnElement.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Generating ${type === 'notes' ? 'Notes' : 'Summary'}...`;
+  }
+
+  const restoreBtn = () => {
+    if (btnElement) {
+      btnElement.disabled = false;
+      btnElement.innerHTML = btnElement.dataset.originalText || (type === 'notes' ? 'Notes' : 'Summary');
+    }
+  };
+
   const user = auth.currentUser;
   if (!user) {
+    restoreBtn();
     showNotification(`You must be logged in to generate ${type === 'notes' ? 'detailed notes' : 'a summary'}.`, "warning");
     return;
   }
 
-  // Check Quota
-  if (!await checkQuota('notes')) return;
-
-  if (btnElement) {
-    btnElement.disabled = true;
-    btnElement.dataset.originalText = btnElement.innerHTML;
-    btnElement.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Generating...`;
+  // Check Quota for specific feature type (notes vs summary)
+  const quotaAllowed = await checkQuota(type);
+  if (!quotaAllowed) {
+    restoreBtn();
+    return;
   }
 
   try {
-    // Determine current playing video's ID from iframe src
-    const iframe = videoPlayer.querySelector('iframe');
-    if (!iframe) throw new Error('No video loaded');
-    const src = iframe.src || '';
-    const match = src.match(/embed\/([a-zA-Z0-9_-]{11,})/);
-    const videoId = match ? match[1] : null;
-    if (!videoId) throw new Error('Could not determine video id');
+    // Determine current playing video's ID
+    let videoId = currentPlayingVideoId;
+    if (!videoId) {
+      const iframe = videoPlayer ? videoPlayer.querySelector('iframe') : null;
+      if (iframe && iframe.src) {
+        const match = iframe.src.match(/embed\/([a-zA-Z0-9_-]{11,})/);
+        if (match) videoId = match[1];
+      }
+    }
+    if (!videoId) {
+      const lastPlayed = JSON.parse(localStorage.getItem("lastPlayedVideo") || "{}");
+      videoId = lastPlayed.videoId || urlParams.get('videoId');
+    }
+    if (!videoId) {
+      const firstActive = document.querySelector('.video-item.active') || document.querySelector('.video-item');
+      videoId = firstActive?.dataset?.videoId || null;
+    }
+    if (!videoId) {
+      throw new Error('Please select and play a video first.');
+    }
 
     // Try to fetch transcript first
     let transcript = await fetchTranscript(videoId);
     let sourceContext = "TRANSCRIPT";
 
     if (!transcript) {
-      // console.log removed
       const metadata = await fetchVideoDetails(videoId);
       if (metadata) {
         transcript = metadata;
         sourceContext = "VIDEO METADATA (Title & Description)";
       } else {
-        transcript = `Video ID: ${videoId}. (No transcript or metadata available).`;
-        sourceContext = "NO DATA";
+        transcript = `Video Title: ${currentPlayingVideoTitle || 'Educational Lesson'}. (Video ID: ${videoId}).`;
+        sourceContext = "VIDEO CONTEXT";
       }
     }
 
     let prompt = '';
     let title = '';
-    const baseInstruction = sourceContext.includes("METADATA")
-      ? "I could not retrieve the full transcript. Please generate the best possible content based on the following Video Title and Description."
+    const baseInstruction = sourceContext.includes("METADATA") || sourceContext.includes("CONTEXT")
+      ? "Please generate the best possible content based on the following Video Title and Description."
       : "Based on the following video transcript:";
 
     if (type === 'notes') {
@@ -700,21 +693,19 @@ async function handleGenerateDocument(type, btnElement) {
       throw new Error('Unknown document type');
     }
 
-    // Call Gemini / generative API with higher limit
-    const result = await generateUsingGemini(prompt, { maxTokens: 8192 });
+    // Call Gemini generative endpoint with safe token limit
+    const result = await generateUsingGemini(prompt, { maxTokens: 4000 });
 
-    // Create PDF
+    // Create and download PDF
     createStyledPdf(`${title}`, result, `${type}_${videoId}`);
 
     // Increment quota on success
-    await incrementQuota('notes');
+    await incrementQuota(type);
+    showNotification(`${type === 'notes' ? 'Notes' : 'Summary'} generated and downloaded!`, "success");
   } catch (e) {
-    showNotification('Document generation failed: ' + (e.message || e), "error");
+    showNotification(formatUserFriendlyError(e), "error");
   } finally {
-    if (btnElement) {
-      btnElement.disabled = false;
-      btnElement.innerHTML = btnElement.dataset.originalText;
-    }
+    restoreBtn();
   }
 }
 
@@ -723,7 +714,6 @@ document.addEventListener('DOMContentLoaded', () => {
   const btnNotes = document.getElementById('notesBtn');
   const btnSummary = document.getElementById('summaryBtn');
   const btnTest = document.getElementById('testBtn');
-
   const btnAskAi = document.getElementById('askAiBtn');
 
   if (btnNotes) btnNotes.addEventListener('click', () => handleGenerateDocument('notes', btnNotes));
@@ -737,19 +727,50 @@ document.addEventListener('DOMContentLoaded', () => {
 
   if (btnTest) {
     btnTest.addEventListener('click', async () => {
+      // 1. Immediate loading feedback and double-click prevention
+      if (btnTest.disabled) return;
+      btnTest.disabled = true;
+      btnTest.dataset.originalText = btnTest.innerHTML;
+      btnTest.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Loading Test...`;
+
+      const restoreTestBtn = () => {
+        btnTest.disabled = false;
+        btnTest.innerHTML = btnTest.dataset.originalText || "Take Test";
+      };
+
       const user = auth.currentUser;
       if (!user) {
+        restoreTestBtn();
         showNotification("You must be logged in to take a test.", "warning");
         return;
       }
-      if (!await checkQuota('test')) return;
+
+      if (!await checkQuota('test')) {
+        restoreTestBtn();
+        return;
+      }
+
       try {
-        const iframe = videoPlayer.querySelector('iframe');
-        if (!iframe) return showNotification('No video loaded', "error");
-        const src = iframe.src || '';
-        const match = src.match(/embed\/([a-zA-Z0-9_-]{11,})/);
-        const videoId = match ? match[1] : null;
-        if (!videoId) return showNotification('Could not determine video id', "error");
+        let videoId = currentPlayingVideoId;
+        if (!videoId) {
+          const iframe = videoPlayer ? videoPlayer.querySelector('iframe') : null;
+          if (iframe && iframe.src) {
+            const match = iframe.src.match(/embed\/([a-zA-Z0-9_-]{11,})/);
+            if (match) videoId = match[1];
+          }
+        }
+        if (!videoId) {
+          const lastPlayed = JSON.parse(localStorage.getItem("lastPlayedVideo") || "{}");
+          videoId = lastPlayed.videoId || urlParams.get('videoId');
+        }
+        if (!videoId) {
+          const firstActive = document.querySelector('.video-item.active') || document.querySelector('.video-item');
+          videoId = firstActive?.dataset?.videoId || null;
+        }
+        if (!videoId) {
+          restoreTestBtn();
+          return showNotification('Please select and play a video first.', "error");
+        }
 
         // Try to fetch transcript and store in sessionStorage for new page
         const transcript = await fetchTranscript(videoId) || `No transcript available for https://www.youtube.com/watch?v=${videoId}`;
@@ -758,8 +779,8 @@ document.addEventListener('DOMContentLoaded', () => {
         // Open test generator page
         window.location.href = `test.html?videoId=${encodeURIComponent(videoId)}`;
       } catch (e) {
-        // Test generation error
-        showNotification('Could not start test generation: ' + e.message, "error");
+        restoreTestBtn();
+        showNotification(formatUserFriendlyError(e), "error");
       }
     });
   }

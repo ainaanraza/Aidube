@@ -1,6 +1,6 @@
 import { auth, db } from "./firebase.js";
 import { doc, setDoc } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-firestore.js";
-import { callGeminiApi, retryOperation, showNotification, checkQuota, incrementQuota, sanitizeHTML, awardCredits } from "./utils.js";
+import { callGeminiApi, retryOperation, showNotification, checkQuota, incrementQuota, sanitizeHTML, awardCredits, formatUserFriendlyError } from "./utils.js";
 
 const urlParams = new URLSearchParams(window.location.search);
 const videoId = urlParams.get('videoId');
@@ -16,7 +16,7 @@ async function generateTest() {
 
   const testContent = document.getElementById('testContent');
 
-  // Show loading state
+  // Show loading state immediately
   testContent.innerHTML = `
     <div class="loading-spinner"></div>
     <h3>Generating questions...</h3>
@@ -47,9 +47,10 @@ async function generateTest() {
   } catch (error) {
     // Error generating test
     testContent.innerHTML = `
-      <div style="color: #ef4444;">
-        <h3>Error generating test</h3>
-        <p>${error.message}</p>
+      <div style="color: #ef4444; padding: 2rem; text-align: center;">
+        <i class="fas fa-exclamation-circle" style="font-size: 2.5rem; margin-bottom: 1rem; color: #ef4444;"></i>
+        <h3 style="margin-bottom: 0.5rem; color: #111827;">Unable to Generate Test</h3>
+        <p style="color: #6b7280; margin-bottom: 1.5rem; max-width: 450px; margin-left: auto; margin-right: auto;">${formatUserFriendlyError(error)}</p>
         <button class="generate-btn" onclick="generateTest()">Try Again</button>
       </div>
     `;

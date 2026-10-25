@@ -128,6 +128,28 @@ export function showNotification(message, type = 'info') {
     }, 3000);
 }
 
+export function formatUserFriendlyError(err) {
+    if (!err) return "Unable to complete request. Please try again in a moment.";
+    const msg = (typeof err === "string" ? err : err.message || "").toLowerCase();
+
+    if (msg.includes("quota") || msg.includes("exhausted") || msg.includes("limit")) {
+        return "Daily generation limit reached. Please try again tomorrow or add credits.";
+    }
+    if (msg.includes("timed out") || msg.includes("timeout") || msg.includes("aborted")) {
+        return "Generation took a little too long. Please tap generate again.";
+    }
+    if (msg.includes("network") || msg.includes("failed to fetch") || msg.includes("connection")) {
+        return "Internet connection problem. Please check your network and try again.";
+    }
+    if (msg.includes("model") || msg.includes("version") || msg.includes("api key") || msg.includes("google") || msg.includes("internal")) {
+        return "The AI service is currently busy. Please try again in a few moments.";
+    }
+    if (msg.includes("no video") || msg.includes("determine video")) {
+        return "Please click and play a video first before generating notes or summaries.";
+    }
+    return "Unable to generate content right now. Please try again shortly.";
+}
+
 // Quota Management
 export async function checkQuota(type) {
     const user = auth.currentUser;

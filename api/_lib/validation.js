@@ -64,11 +64,7 @@ export const ALLOWED_GEMINI_MODELS = [
   "gemini-3.8-flash",
   "gemini-3.7-flash",
   "gemini-3-flash-preview",
-  "gemini-2.5-flash",
-  "gemini-2.0-flash",
-  "gemini-1.5-flash",
-  "gemini-1.5-flash-8b",
-  "gemini-1.5-pro"
+  "gemini-2.5-flash"
 ];
 
 export function validateGeminiInput(body) {
@@ -84,8 +80,10 @@ export function validateGeminiInput(body) {
   let model = "gemini-3.1-flash-lite";
   if (body.model && typeof body.model === "string") {
     let requested = body.model.trim().toLowerCase();
-    // Normalize to requested model if allowed, else fallback to default modern model
-    if (ALLOWED_GEMINI_MODELS.includes(requested)) {
+    // Automatically upgrade any client requests for retired/deprecated 1.5 or 2.0 models
+    if (requested.includes("1.5") || requested.includes("2.0") || requested.includes("deprecated")) {
+      model = "gemini-3.1-flash-lite";
+    } else if (ALLOWED_GEMINI_MODELS.includes(requested)) {
       model = requested;
     } else {
       model = "gemini-3.1-flash-lite";
