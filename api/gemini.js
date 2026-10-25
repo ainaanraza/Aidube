@@ -314,6 +314,6 @@ CRITICAL INSTRUCTIONS:
     if (error.message?.includes("key") && (error.message?.includes("invalid") || error.message?.includes("unauthorized"))) {
       return sendSafeError(res, 401, "Configured GEMINI_API_KEY is invalid or unauthorized in Google Cloud.", error);
     }
-    return sendSafeError(res, 500, "AI operation failed. Please check server logs for details.", error);
+    return sendSafeError(res, 500, scrubSecrets(error.message) || "AI operation failed.", error);
   }
 }

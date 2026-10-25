@@ -270,6 +270,6 @@ export default async function handler(req, res) {
     if (error.message?.includes("key") && (error.message?.includes("invalid") || error.message?.includes("unauthorized"))) {
       return sendSafeError(res, 401, "Configured YOUTUBE_API_KEY is invalid in Google Cloud.", error);
     }
-    return sendSafeError(res, 500, "Failed to retrieve YouTube data. Please try again later.", error);
+    return sendSafeError(res, 500, scrubSecrets(error.message) || "Failed to retrieve YouTube data.", error);
   }
 }
