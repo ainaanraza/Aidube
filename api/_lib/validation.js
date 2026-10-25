@@ -55,7 +55,7 @@ export function checkPayloadSize(req, maxBytes = 65536) {
   return true;
 }
 
-export const ALLOWED_GEMINI_ACTIONS = ["generate", "test", "roadmap", "subtopics", "research"];
+export const ALLOWED_GEMINI_ACTIONS = ["generate", "test", "roadmap", "subtopics", "research", "models"];
 export const ALLOWED_GEMINI_MODELS = [
   "gemini-1.5-flash",
   "gemini-1.5-flash-8b",

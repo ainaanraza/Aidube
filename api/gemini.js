@@ -3,6 +3,7 @@
 
 import {
   getGeminiKeys,
+  getCurrentGeminiKey,
   getRotatingKeys,
   markKeyExhausted,
   markKeySuccess,
@@ -302,6 +303,16 @@ CRITICAL INSTRUCTIONS:
         } catch {
           return sendSafeError(res, 502, "Failed to parse research summary from AI. Please try again.");
         }
+      }
+
+      case "models": {
+        const apiKey = getCurrentGeminiKey();
+        if (!apiKey) {
+          return sendSafeError(res, 500, "GEMINI_API_KEY is not configured.");
+        }
+        const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`);
+        const data = await r.json().catch(() => ({}));
+        return res.status(r.status).json(scrubSecrets(data));
       }
 
       default:
