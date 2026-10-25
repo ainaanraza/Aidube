@@ -1,7 +1,14 @@
 // api/youtube.js
 // Secure serverless endpoint for YouTube Data API v3 operations
 
-import { getCurrentYouTubeKey, rotateYouTubeKey, getYouTubeKeys, scrubSecrets } from "./_lib/keys.js";
+import {
+  getYouTubeKeys,
+  getRotatingKeys,
+  markKeyExhausted,
+  markKeySuccess,
+  classifyYouTubeError,
+  scrubSecrets
+} from "./_lib/keys.js";
 import { applyCorsAndSecurityHeaders, handleOptions, sendSafeError, sendRateLimitHeaders } from "./_lib/security.js";
 import { checkRateLimit } from "./_lib/rateLimit.js";
 import {
@@ -40,17 +47,18 @@ function setCache(key, data) {
 }
 
 // Executes upstream YouTube API request with server-side key rotation and timeout
-async function fetchYouTubeWithRotation(urlBuilder) {
+export async function fetchYouTubeWithRotation(urlBuilder) {
   const allKeys = getYouTubeKeys();
   if (allKeys.length === 0) {
     throw new Error("YOUTUBE_API_KEY is not configured on the server.");
   }
 
-  const attempts = Math.min(allKeys.length, 3);
+  const rotatingKeys = getRotatingKeys("youtube");
+  const maxAttempts = Math.min(rotatingKeys.length, 3);
   let lastError = null;
 
-  for (let i = 0; i < attempts; i++) {
-    const apiKey = getCurrentYouTubeKey();
+  for (let i = 0; i < maxAttempts; i++) {
+    const apiKey = rotatingKeys[i];
     const targetUrl = urlBuilder(apiKey);
 
     try {
@@ -62,24 +70,33 @@ async function fetchYouTubeWithRotation(urlBuilder) {
       });
 
       if (response.ok) {
+        markKeySuccess("youtube", apiKey);
         return await response.json();
       }
 
-      // Handle Quota Exhaustion (403 or 429)
-      if (response.status === 403 || response.status === 429) {
-        rotateYouTubeKey();
-        lastError = new Error(`YouTube API quota or rate limit reached (${response.status})`);
-        continue;
+      const errJson = await response.json().catch(() => ({}));
+      const classification = classifyYouTubeError(response.status, errJson);
+
+      if (!classification.retryableWithKey) {
+        // Non-retryable error: 400 Bad Request, 404 Not Found, 403 Forbidden Resource (e.g. commentsDisabled)
+        // DO NOT retry with other keys!
+        const safeMsg = scrubSecrets(classification.message);
+        const err = new Error(safeMsg);
+        err.status = response.status;
+        err.isNonRetryable = true;
+        err.isClientError = response.status === 400 || response.status === 404;
+        throw err;
       }
 
-      const errJson = await response.json().catch(() => ({}));
-      const message = errJson.error?.message || `YouTube API responded with status ${response.status}`;
-      throw new Error(message);
+      // Retryable with another key (Quota exceeded, Rate limit, Invalid key)
+      markKeyExhausted("youtube", apiKey);
+      lastError = new Error(scrubSecrets(classification.message));
     } catch (err) {
-      lastError = err;
-      if (i < attempts - 1) {
-        rotateYouTubeKey();
+      if (err.isNonRetryable || err.isClientError || (err.status && err.status < 500 && err.status !== 403 && err.status !== 429)) {
+        throw err;
       }
+      lastError = err;
+      markKeyExhausted("youtube", apiKey);
     }
   }
 

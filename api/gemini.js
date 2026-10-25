@@ -1,13 +1,20 @@
 // api/gemini.js
 // Secure serverless endpoint for Google Gemini Generative Language API
 
-import { getCurrentGeminiKey, rotateGeminiKey, getGeminiKeys } from "./_lib/keys.js";
+import {
+  getGeminiKeys,
+  getRotatingKeys,
+  markKeyExhausted,
+  markKeySuccess,
+  classifyGeminiError,
+  scrubSecrets
+} from "./_lib/keys.js";
 import { applyCorsAndSecurityHeaders, handleOptions, sendSafeError, sendRateLimitHeaders } from "./_lib/security.js";
 import { checkRateLimit } from "./_lib/rateLimit.js";
 import { validateGeminiInput, checkPayloadSize, ALLOWED_GEMINI_MODELS } from "./_lib/validation.js";
 
 // Executes upstream Gemini generateContent request with server-side key rotation and timeout
-async function callGeminiApi({ prompt, model = "gemini-1.5-flash", maxOutputTokens = 2000, temperature = 0.2, responseMimeType = null }) {
+export async function callGeminiApi({ prompt, model = "gemini-1.5-flash", maxOutputTokens = 2000, temperature = 0.2, responseMimeType = null }) {
   const allKeys = getGeminiKeys();
   if (allKeys.length === 0) {
     throw new Error("GEMINI_API_KEY is not configured on the server.");
@@ -21,13 +28,15 @@ async function callGeminiApi({ prompt, model = "gemini-1.5-flash", maxOutputToke
     "gemini-1.5-pro"
   ].filter((m, idx, arr) => arr.indexOf(m) === idx);
 
+  const rotatingKeys = getRotatingKeys("gemini");
+  const maxAttempts = Math.min(rotatingKeys.length, 3);
   let lastError = null;
 
   for (const currentModel of candidateModels) {
-    const attempts = Math.min(allKeys.length, 3);
+    let modelAvailable = true;
 
-    for (let i = 0; i < attempts; i++) {
-      const apiKey = getCurrentGeminiKey();
+    for (let i = 0; i < maxAttempts; i++) {
+      const apiKey = rotatingKeys[i];
       const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${currentModel}:generateContent?key=${apiKey}`;
 
       const requestBody = {
@@ -61,30 +70,44 @@ async function callGeminiApi({ prompt, model = "gemini-1.5-flash", maxOutputToke
           const data = await response.json();
           const candidate = data.candidates?.[0];
           const text = candidate?.content?.parts?.[0]?.text || "";
+          markKeySuccess("gemini", apiKey);
           return { text, model: currentModel };
         }
 
-        // Quota exhaustion (429) -> rotate to next key
-        if (response.status === 429) {
-          rotateGeminiKey();
-          lastError = new Error("Gemini quota reached on current key");
-          continue;
-        }
-
-        // Model not found (404) or unsupported configuration (400) -> try next candidate model
-        if (response.status === 404 || (response.status === 400 && currentModel !== "gemini-1.5-flash")) {
-          break; // break inner loop, try next model
-        }
-
         const errJson = await response.json().catch(() => ({}));
-        const msg = errJson.error?.message || `Gemini API error with status ${response.status}`;
-        lastError = new Error(msg);
-      } catch (err) {
-        lastError = err;
-        if (i < attempts - 1) {
-          rotateGeminiKey();
+        const classification = classifyGeminiError(response.status, errJson);
+
+        if (classification.isModelError) {
+          modelAvailable = false;
+          lastError = new Error(classification.message);
+          break; // Break inner loop, try next candidate model
         }
+
+        if (!classification.retryableWithKey) {
+          // Non-retryable error (e.g. client error or upstream 5xx temporary outage)
+          // DO NOT burn remaining keys!
+          const unretryableErr = new Error(scrubSecrets(classification.message));
+          unretryableErr.isNonRetryable = true;
+          unretryableErr.isClientError = classification.isClientError;
+          unretryableErr.status = response.status;
+          throw unretryableErr;
+        }
+
+        // Retryable with another key (Quota exceeded, Rate limit, Invalid key)
+        markKeyExhausted("gemini", apiKey);
+        lastError = new Error(scrubSecrets(classification.message));
+      } catch (err) {
+        if (err.isNonRetryable || err.isClientError) {
+          throw err;
+        }
+        lastError = err;
+        markKeyExhausted("gemini", apiKey);
       }
+    }
+
+    if (modelAvailable && lastError && !lastError.message?.includes("model")) {
+      // If the model was valid but keys were exhausted/invalid, do not repeat failed keys across models
+      break;
     }
   }
 
