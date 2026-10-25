@@ -7,18 +7,18 @@ import { checkRateLimit } from "./_lib/rateLimit.js";
 import { validateGeminiInput, checkPayloadSize, ALLOWED_GEMINI_MODELS } from "./_lib/validation.js";
 
 // Executes upstream Gemini generateContent request with server-side key rotation and timeout
-async function callGeminiApi({ prompt, model = "gemini-2.5-flash", maxOutputTokens = 2000, temperature = 0.2, responseMimeType = null }) {
+async function callGeminiApi({ prompt, model = "gemini-1.5-flash", maxOutputTokens = 2000, temperature = 0.2, responseMimeType = null }) {
   const allKeys = getGeminiKeys();
   if (allKeys.length === 0) {
     throw new Error("GEMINI_API_KEY is not configured on the server.");
   }
 
-  // Model fallback chain: requested model -> stable fast models
+  // Model fallback chain: requested model -> official stable models
   const candidateModels = [
-    model,
-    "gemini-2.5-flash",
+    model || "gemini-1.5-flash",
     "gemini-1.5-flash",
-    "gemini-2.0-flash"
+    "gemini-2.0-flash",
+    "gemini-1.5-pro"
   ].filter((m, idx, arr) => arr.indexOf(m) === idx);
 
   let lastError = null;
@@ -71,8 +71,8 @@ async function callGeminiApi({ prompt, model = "gemini-2.5-flash", maxOutputToke
           continue;
         }
 
-        // Model not found (404) or unsupported config (400) -> try next candidate model
-        if (response.status === 404) {
+        // Model not found (404) or unsupported configuration (400) -> try next candidate model
+        if (response.status === 404 || (response.status === 400 && currentModel !== "gemini-1.5-flash")) {
           break; // break inner loop, try next model
         }
 

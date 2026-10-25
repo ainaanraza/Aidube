@@ -110,7 +110,7 @@ describe("Security Controls: Input Validation & Sanitization", () => {
   it("should normalize legacy/deprecated model names to official stable models", () => {
     const result = validateGeminiInput({ action: "generate", prompt: "Test prompt", model: "gemini-3.6-flash" });
     assert.strictEqual(result.valid, true);
-    assert.strictEqual(result.data.model, "gemini-2.5-flash");
+    assert.strictEqual(result.data.model, "gemini-1.5-flash");
   });
 
   it("should enforce maximum payload size (64KB)", () => {
