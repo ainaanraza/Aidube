@@ -1,18 +1,31 @@
 {
   "name": "aidube",
   "version": "1.0.0",
-  "description": "Aidube - Smart Learning Web App",
+  "description": "Aidube (aidube.com) - AI-powered learning platform transforming free internet video content into distraction-free, structured classrooms with auto-notes, summaries, interactive quizzes, and learning roadmaps.",
+  "homepage": "https://aidube.com",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ainaanraza/Aidube.git"
+  },
+  "bugs": {
+    "url": "https://github.com/ainaanraza/Aidube/issues"
+  },
   "type": "module",
   "scripts": {
     "start": "python app.py",
-    "test": "node --test"
+    "test": "node --test test/*.test.mjs"
   },
   "keywords": [
     "education",
     "ai",
     "learning",
     "gemini",
-    "youtube"
+    "gemini-flash",
+    "youtube",
+    "study-assistant",
+    "notes-generator",
+    "edtech",
+    "serverless"
   ],
   "author": "Ainaan Raza",
   "license": "MIT"
