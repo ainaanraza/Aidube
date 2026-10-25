@@ -4,13 +4,15 @@ import { getAuth, GoogleAuthProvider, createUserWithEmailAndPassword, signInWith
 import { getFirestore } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-firestore.js";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyDFkjR_NuVsXkB13M7oVTzqWq-ukvtx5dU",
-  authDomain: "aidube.firebaseapp.com",
-  projectId: "aidube",
-  storageBucket: "aidube.appspot.com", // ✅ must be .appspot.com
-  messagingSenderId: "412680177345",
-  appId: "1:412680177345:web:32d40895fbaf8d28d93640",
+  apiKey: "AIzaSyAC5qK3m-FLkntN5qulQOm1gHRuBVTBVFk",
+  authDomain: "aidube-d5791.firebaseapp.com",
+  projectId: "aidube-d5791",
+  storageBucket: "aidube-d5791.firebasestorage.app",
+  messagingSenderId: "73913173806",
+  appId: "1:73913173806:web:ecfe873c0ce15ed5339cbf",
+  measurementId: "G-JJ0XB4BFWQ"
 };
+
 
 const app = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
 
