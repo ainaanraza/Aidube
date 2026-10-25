@@ -444,7 +444,7 @@ async function generateUsingGemini(prompt, opts = {}) {
       prompt,
       maxTokens: opts.maxTokens || 1200,
       temperature: opts.temperature || 0.2,
-      model: opts.model || 'gemini-2.5-flash'
+      model: opts.model || 'gemini-1.5-flash'
     });
     return res.text;
   }, 3, 1000);

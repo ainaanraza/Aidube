@@ -58,6 +58,7 @@ export function checkPayloadSize(req, maxBytes = 65536) {
 export const ALLOWED_GEMINI_ACTIONS = ["generate", "test", "roadmap", "subtopics", "research"];
 export const ALLOWED_GEMINI_MODELS = [
   "gemini-1.5-flash",
+  "gemini-1.5-flash-8b",
   "gemini-1.5-pro",
   "gemini-2.0-flash"
 ];
@@ -75,12 +76,11 @@ export function validateGeminiInput(body) {
   let model = "gemini-1.5-flash";
   if (body.model && typeof body.model === "string") {
     let requested = body.model.trim();
-    // Normalize deprecated or fictional model names to official standard model
-    if (requested === "gemini-3.6-flash" || requested === "gemini-2.5-flash" || requested === "text-bison-001") {
-      requested = "gemini-1.5-flash";
-    }
+    // Use valid official model, or gracefully normalize any fictional/unsupported name (e.g. gemini-3.8-flash)
     if (ALLOWED_GEMINI_MODELS.includes(requested)) {
       model = requested;
+    } else {
+      model = "gemini-1.5-flash";
     }
   }
 
