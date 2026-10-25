@@ -1,7 +1,6 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
 import { auth, db } from "./firebase.js";
 import { doc, setDoc } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-firestore.js";
-import { getGeminiApiKey, rotateGeminiKey, retryOperation, showNotification, checkQuota, incrementQuota, sanitizeHTML, awardCredits } from "./utils.js";
+import { callGeminiApi, retryOperation, showNotification, checkQuota, incrementQuota, sanitizeHTML, awardCredits } from "./utils.js";
 
 const urlParams = new URLSearchParams(window.location.search);
 const videoId = urlParams.get('videoId');
@@ -29,47 +28,19 @@ async function generateTest() {
     const lastPlayed = JSON.parse(localStorage.getItem("lastPlayedVideo") || "{}");
     const title = lastPlayed.videoId === videoId ? lastPlayed.title : "this video";
 
-    const prompt = `Generate 3 multiple choice questions for "${title}".
-    Format: JSON array. No markdown.
-    [{"question": "...", "options": ["..."], "correctAnswer": 0}]`;
-
     const result = await retryOperation(async () => {
-      // Initialize with CURRENT key
-      const genAI = new GoogleGenerativeAI(await getGeminiApiKey());
+      return await callGeminiApi("test", {
+        title,
+        videoId,
+        questionCount: 3
+      });
+    }, 3, 2000);
 
-      try {
-        const model = genAI.getGenerativeModel({ model: "gemini-3.6-flash" });
-        return await model.generateContent({
-          contents: [{ role: "user", parts: [{ text: prompt }] }],
-          generationConfig: { maxOutputTokens: 2000 }
-        });
-      } catch (err) {
-        if (err.message.includes('404') || err.message.includes('503')) {
-          const fallbackModel = genAI.getGenerativeModel({ model: "gemini-3.6-flash" });
-          return await fallbackModel.generateContent({
-            contents: [{ role: "user", parts: [{ text: prompt }] }],
-            generationConfig: { maxOutputTokens: 2000 }
-          });
-        }
-        throw err;
-      }
-    }, 3, 2000, rotateGeminiKey); // Pass rotation callback
-
-    const response = await result.response;
-    let text = response.text();
-    // Raw Gemini response logged
-
-    // Robust JSON extraction: find the first '[' and last ']'
-    const firstBracket = text.indexOf('[');
-    const lastBracket = text.lastIndexOf(']');
-
-    if (firstBracket !== -1 && lastBracket !== -1) {
-      text = text.substring(firstBracket, lastBracket + 1);
-    } else {
-      throw new Error("No valid JSON array found in response");
+    const questions = result.questions;
+    if (!Array.isArray(questions) || questions.length === 0) {
+      throw new Error("No valid questions returned by server");
     }
 
-    const questions = JSON.parse(text);
     renderTest(questions);
     await incrementQuota('test');
 

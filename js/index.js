@@ -2,7 +2,7 @@ import { auth, db, analytics, setUserId, logEvent } from "./firebase.js";
 import { doc, setDoc, getDoc, getDocs, collection, deleteDoc, query, orderBy, addDoc, onSnapshot }
   from "https://www.gstatic.com/firebasejs/12.5.0/firebase-firestore.js";
 import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-auth.js";
-import { getYouTubeApiKey, rotateYouTubeKey, isValidPlaylistId, retryOperation, showNotification, sanitizeHTML } from "./utils.js";
+import { callYouTubeApi, isValidPlaylistId, retryOperation, showNotification, sanitizeHTML } from "./utils.js";
 
 const lectureHistory = JSON.parse(localStorage.getItem("lectureHistory")) || [];
 const savedPlaylists = JSON.parse(localStorage.getItem("savedPlaylists")) || [];
@@ -229,15 +229,8 @@ async function fetchPlaylists(customQuery = null, isRandom = false, isFromLoad =
 
   try {
     const data = await retryOperation(async () => {
-      const url = `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(searchQuery)}&type=playlist&key=${getYouTubeApiKey()}&maxResults=50`;
-      const response = await fetch(url);
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(`YouTube API error: ${response.status} - ${errorData.error?.message || response.statusText}`);
-      }
-      return await response.json();
-    }, 3, 1000, rotateYouTubeKey);
+      return await callYouTubeApi("searchPlaylists", { q: searchQuery, maxResults: 50 });
+    }, 3, 1000);
 
     if (!data.items || data.items.length === 0) {
       container.innerHTML = "<p>No playlists found.</p>";

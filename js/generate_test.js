@@ -1,33 +1,27 @@
 // Simple test generator page script
 
-let GENERATIVE_API_KEY = 'AIzaSyBAymnNctjlkQG4HaYj4sAv3H0VE9g6hgA';
-
 async function generateUsingGemini(prompt, opts = {}) {
-  if (!GENERATIVE_API_KEY) {
-    GENERATIVE_API_KEY = window.prompt('Enter your Google Generative API key (used only in browser):', '') || '';
-    if (!GENERATIVE_API_KEY) throw new Error('Generative API key required');
-  }
-  const model = opts.model || 'text-bison-001';
-  const url = `https://generativelanguage.googleapis.com/v1beta2/models/${model}:generateText?key=${GENERATIVE_API_KEY}`;
-  const body = {
-    "temperature": opts.temperature || 0.2,
-    "candidateCount": 1,
-    "maxOutputTokens": opts.maxTokens || 800,
-    "input": prompt
-  };
-  const res = await fetch(url, {
+  const res = await fetch('/api/gemini', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body)
+    headers: {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json'
+    },
+    body: JSON.stringify({
+      action: 'generate',
+      prompt: prompt,
+      maxTokens: opts.maxTokens || 1200,
+      temperature: opts.temperature || 0.2
+    })
   });
+
   if (!res.ok) {
-    const txt = await res.text().catch(() => '');
-    throw new Error(`Generative API error ${res.status}: ${txt}`);
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || `Server error: ${res.status}`);
   }
-  const json = await res.json();
-  const gen = json?.candidates?.[0]?.content || json?.output?.[0]?.content || json?.candidates?.[0]?.message?.content?.[0]?.text;
-  if (!gen) return JSON.stringify(json);
-  return gen;
+
+  const data = await res.json();
+  return data.text || '';
 }
 
 function renderQuestions(raw) {

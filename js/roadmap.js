@@ -1,8 +1,7 @@
-import { GoogleGenerativeAI } from "https://cdn.jsdelivr.net/npm/@google/generative-ai/+esm";
 import { auth, db } from "./firebase.js";
 import { addDoc, collection, getDocs, deleteDoc }
   from "https://www.gstatic.com/firebasejs/12.5.0/firebase-firestore.js";
-import { showNotification, checkQuota, incrementQuota, sanitizeHTML, getGeminiApiKey, rotateGeminiKey, retryOperation } from "./utils.js";
+import { showNotification, checkQuota, incrementQuota, sanitizeHTML, callGeminiApi, retryOperation } from "./utils.js";
 
 
 // small helper to query single element
@@ -76,102 +75,19 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 
-// Fetch related subtopics dynamically using Gemini
+// Fetch related subtopics dynamically using Gemini backend API
 async function fetchRelatedTopics(mainTopic) {
   try {
     const levelEl = document.getElementById("levelSelect");
     const level = levelEl ? levelEl.value : "beginner";
 
-    const preferredModel = "gemini-3.6-flash"; // or dynamically chosen from listModels()
-
-    // Stronger prompt to ensure relevant & capped topics
-    const prompt = `List the 10 most important subtopics for learning "${mainTopic}" at a ${level} level.
-Return ONLY the subtopic names, one per line, no numbering, no explanations.`;
-
     const result = await retryOperation(async () => {
-      const genAI = new GoogleGenerativeAI(await getGeminiApiKey());
-      const model = genAI.getGenerativeModel({ model: preferredModel });
-      return await model.generateContent(prompt);
-    }, 5, 1000, () => {
-      console.warn("fetchRelatedTopics API limit hit, rotating key...");
-      rotateGeminiKey();
-    });
+      return await callGeminiApi("subtopics", { topic: mainTopic, level });
+    }, 3, 1000);
 
-    const raw = (result && result.response && typeof result.response.text === "function")
-      ? await result.response.text()
-      : (result && result.response) ? String(result.response) : "";
-
-    if (!raw) return [];
-
-    // Flexible parsing: handle lists, commas, bullets
-    let topics = raw
-      .split(/\r?\n|,|;|-/)
-      .map(t => t.replace(/^[\s\d\.\)\-\*]+/, "").replace(/[`*_]{1,}/g, "").trim())
-      .filter(t => t.length > 0);
-
-    // Retry if Gemini gave fewer than 5
-    if (topics.length < 5) {
-      const strictPrompt = `Provide exactly 10 key subtopics for "${mainTopic}" at ${level} level.
-Only names, one per line, no numbering, no extra text.`;
-
-      const retryResult = await retryOperation(async () => {
-        const genAI = new GoogleGenerativeAI(await getGeminiApiKey());
-        const model = genAI.getGenerativeModel({ model: preferredModel });
-        return await model.generateContent(strictPrompt);
-      }, 5, 1000, () => {
-        console.warn("fetchRelatedTopics retry API limit hit, rotating key...");
-        rotateGeminiKey();
-      });
-
-      const retryText = (retryResult && retryResult.response && typeof retryResult.response.text === "function")
-        ? await retryResult.response.text()
-        : (retryResult && retryResult.response) ? String(retryResult.response) : "";
-      topics = retryText
-        .split(/\r?\n|,|;/)
-        .map(t => t.replace(/^[\s\d\.\)\-\*]+/, "").trim())
-        .filter(t => t.length > 0);
-    }
-
-    // Always cap at 10
-    return topics.slice(0, 10);
+    return result.topics || [];
   } catch (err) {
-    // fetchRelatedTopics error
     return [];
-  }
-}
-
-
-// call the models listing (v1beta) to see what model names the API currently exposes
-async function listModels() {
-  const apiKey = await getGeminiApiKey();
-  const url = "https://generativelanguage.googleapis.com/v1beta/models?key=" + apiKey;
-  const res = await fetch(url, {
-    headers: { "x-goog-api-key": apiKey, "Content-Type": "application/json" }
-  });
-  if (!res.ok) {
-    const txt = await res.text();
-    throw new Error(`ListModels failed: ${res.status} ${txt}`);
-  }
-  const json = await res.json();
-  // json.models is the array of available model metadata (inspect it in console)
-  // Available models logged
-  return json.models || [];
-}
-
-async function pickModel(preferred = ["gemini-3.6-flash", "gemini-3.6-flash"]) {
-  try {
-    const models = await listModels();
-    // model entries vary, but each has a 'name' or 'model' field; be flexible:
-    const names = models.map(m => m.name || m.model || m.modelId || "").filter(Boolean);
-    for (const p of preferred) {
-      const found = names.find(n => n.includes(p));
-      if (found) return found;
-    }
-    // fallback: first model that supports generateContent (inspect model metadata)
-    return names[0] || null;
-  } catch (e) {
-    // Could not list models
-    return null;
   }
 }
 
@@ -236,33 +152,23 @@ async function generateRoadmap(topic) {
         .map(cb => cb.value);
     }
 
-    let prompt = `Create a ${level} level learning roadmap for: ${topic}.`;
-    if (knowledge === "previous" && excludedTopics.length > 0) {
-      prompt += ` Exclude these topics: ${excludedTopics.join(", ")}.`;
-    }
-    prompt += " Provide the roadmap as short ordered/bullet steps, each on a new line.";
-
     const result = await retryOperation(async () => {
-      const genAI = new GoogleGenerativeAI(await getGeminiApiKey());
-      const model = genAI.getGenerativeModel({ model: "gemini-3.6-flash" });
-      return await model.generateContent(prompt);
-    }, 5, 1000, () => {
-      console.warn("generateRoadmap API limit hit, rotating key...");
-      rotateGeminiKey();
-    });
-    const responseText = await result.response.text();
+      return await callGeminiApi("roadmap", {
+        topic,
+        level,
+        excludedTopics
+      });
+    }, 3, 1000);
+
+    const steps = result.steps || [];
+    const responseText = result.text || "";
 
     roadmapContainer.innerHTML = "";
 
-    if (!responseText || responseText.trim() === "") {
+    if (!responseText || responseText.trim() === "" || steps.length === 0) {
       roadmapContainer.innerHTML = `<div class="error-message">Unable to generate roadmap. Please check network.</div>`;
       return;
     }
-
-    const steps = responseText
-      .split(/\r?\n/)
-      .map(sanitizeText)
-      .filter(s => s !== "" && !s.toLowerCase().includes("roadmap") && !s.toLowerCase().includes("learning"));
 
     const container = document.createElement("div");
     container.className = "roadmap-container";

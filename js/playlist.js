@@ -1,7 +1,6 @@
 import { auth, db } from "./firebase.js";
 import { setDoc, doc, getDoc, deleteDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-firestore.js";
-import { getYouTubeApiKey, rotateYouTubeKey, isValidPlaylistId, retryOperation, getGeminiApiKey, rotateGeminiKey, showNotification, checkQuota, incrementQuota, sanitizeHTML, trackVideoCompletion, awardCredits } from "./utils.js";
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { callYouTubeApi, callGeminiApi, isValidPlaylistId, retryOperation, showNotification, checkQuota, incrementQuota, sanitizeHTML, trackVideoCompletion, awardCredits } from "./utils.js";
 
 
 const urlParams = new URLSearchParams(window.location.search);
@@ -33,15 +32,9 @@ async function loadPlaylist(pageToken = "") {
       throw new Error(`Invalid playlist ID: "${playlistId}". This appears to be a video ID, not a playlist ID.`);
     }
 
-    const url = `https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&playlistId=${playlistId}&key=${getYouTubeApiKey()}&maxResults=50${pageToken ? `&pageToken=${pageToken}` : ""}`;
-    const response = await fetch(url);
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(`YouTube API error: ${response.status} - ${errorData.error?.message || response.statusText}`);
-    }
-
-    const data = await response.json();
+    const data = await retryOperation(async () => {
+      return await callYouTubeApi("playlistItems", { playlistId, pageToken, maxResults: 50 });
+    }, 3, 1000);
 
     if (!data.items || data.items.length === 0) {
       if (videoList.innerHTML.trim() === "") {
@@ -263,16 +256,12 @@ async function fetchTranscript(videoId) {
 async function fetchVideoDetails(videoId) {
   try {
     return await retryOperation(async () => {
-      const key = getYouTubeApiKey();
-      const url = `https://www.googleapis.com/youtube/v3/videos?part=snippet&id=${videoId}&key=${key}`;
-      const res = await fetch(url);
-      if (!res.ok) throw new Error('Video details fetch failed');
-      const data = await res.json();
+      const data = await callYouTubeApi("videoDetails", { videoId });
       if (!data.items || data.items.length === 0) throw new Error('Video not found');
 
       const snippet = data.items[0].snippet;
       return `Title: ${snippet.title}\n\nDescription:\n${snippet.description}`;
-    }, 3, 1000, rotateYouTubeKey);
+    }, 3, 1000);
   } catch (e) {
     return null;
   }
@@ -334,10 +323,7 @@ async function fetchWikipediaContext(query) {
 async function getTopicKeywordFromYouTube(videoId, fallbackTitle) {
   const result = { keyword: fallbackTitle, description: "" };
   try {
-    const url = `https://www.googleapis.com/youtube/v3/videos?part=snippet&id=${videoId}&key=${getYouTubeApiKey()}`;
-    const res = await fetch(url);
-    if (!res.ok) return result;
-    const data = await res.json();
+    const data = await callYouTubeApi("videoDetails", { videoId });
     
     if (data.items && data.items.length > 0) {
       const snippet = data.items[0].snippet;
@@ -454,41 +440,14 @@ async function populateLessonContent(videoId, videoTitle) {
 
 async function generateUsingGemini(prompt, opts = {}) {
   return await retryOperation(async () => {
-    const genAI = new GoogleGenerativeAI(await getGeminiApiKey());
-
-    try {
-      // Try the newer model first (matching test.js behavior)
-      const modelName = opts.model || 'gemini-3.6-flash';
-      const model = genAI.getGenerativeModel({ model: modelName });
-
-      const result = await model.generateContent({
-        contents: [{ role: "user", parts: [{ text: prompt }] }],
-        generationConfig: {
-          temperature: opts.temperature || 0.2,
-          maxOutputTokens: opts.maxTokens || 1200,
-        }
-      });
-      const response = await result.response;
-      return response.text();
-    } catch (err) {
-      // Fallback for 404 (model not found) or 503 (service unavailable)
-      if (err.message.includes('404') || err.message.includes('503')) {
-        // console.warn removed
-        const fallbackModelName = 'gemini-3.6-flash';
-        const fallbackModel = genAI.getGenerativeModel({ model: fallbackModelName });
-        const result = await fallbackModel.generateContent({
-          contents: [{ role: "user", parts: [{ text: prompt }] }],
-          generationConfig: {
-            temperature: opts.temperature || 0.2,
-            maxOutputTokens: opts.maxTokens || 8192,
-          }
-        });
-        const response = await result.response;
-        return response.text();
-      }
-      throw err;
-    }
-  }, 3, 1000, rotateGeminiKey);
+    const res = await callGeminiApi("generate", {
+      prompt,
+      maxTokens: opts.maxTokens || 1200,
+      temperature: opts.temperature || 0.2,
+      model: opts.model || 'gemini-2.5-flash'
+    });
+    return res.text;
+  }, 3, 1000);
 }
 
 function createStyledPdf(title, text, shortName = 'notes') {
@@ -815,15 +774,8 @@ async function fetchPlaylistDetails() {
 
   try {
     const data = await retryOperation(async () => {
-      // We only need snippet.title
-      const url = `https://www.googleapis.com/youtube/v3/playlists?part=snippet&id=${playlistId}&key=${getYouTubeApiKey()}`;
-      const res = await fetch(url);
-      if (!res.ok) {
-        const errorData = await res.json().catch(() => ({}));
-        throw new Error(`Playlist details fetch failed: ${res.status} - ${errorData.error?.message || res.statusText}`);
-      }
-      return await res.json();
-    }, 3, 1000, rotateYouTubeKey);
+      return await callYouTubeApi("playlistDetails", { playlistId });
+    }, 3, 1000);
 
     if (data.items && data.items.length > 0) {
       currentPlaylistTitle = data.items[0].snippet.title;

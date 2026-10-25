@@ -54,35 +54,32 @@ def run_research_agent(topic):
     last_error = None
     
     for idx, key in enumerate(GEMINI_API_KEYS):
-        try:
-            logger.info(f"Trying Gemini API key {idx + 1}/{len(GEMINI_API_KEYS)}...")
-            client = genai.Client(api_key=key)
-            response = client.models.generate_content(
-                model='gemini-3.6-flash',
-                contents=prompt,
-                config=types.GenerateContentConfig(
-                    tools=[{"google_search": {}}],
-                    temperature=0.2
+        for candidate_model in ['gemini-2.5-flash', 'gemini-1.5-flash', 'gemini-2.0-flash']:
+            try:
+                client = genai.Client(api_key=key)
+                response = client.models.generate_content(
+                    model=candidate_model,
+                    contents=prompt,
+                    config=types.GenerateContentConfig(
+                        tools=[{"google_search": {}}],
+                        temperature=0.2
+                    )
                 )
-            )
-            # If successful, break out of the loop
-            break
-        except Exception as e:
-            error_msg = str(e).lower()
-            last_error = e
-            logger.warning(f"Key {idx + 1} failed: {e}")
-            # If it's a 429 (Resource Exhausted), try next key, else it might be a fatal error
-            if "429" in error_msg or "exhausted" in error_msg or "quota" in error_msg:
-                continue
-            else:
-                # Fatal error that is not quota related
                 break
+            except Exception as e:
+                error_msg = str(e).lower()
+                last_error = e
+                if "429" in error_msg or "exhausted" in error_msg or "quota" in error_msg:
+                    break # try next key
+                continue # try next candidate model
+        if response:
+            break
 
     if not response:
-        logger.error(f"All keys exhausted or a failure occurred. Last Error: {last_error}")
+        logger.error("All keys or candidate models exhausted")
         return {
             "topic": topic,
-            "summary": f"Failed to generate research (Quota Exhausted/API Error). Please try again later.",
+            "summary": "Failed to generate research. Please verify your GEMINI_API_KEY configuration.",
             "resources": []
         }
         
@@ -92,10 +89,7 @@ def run_research_agent(topic):
         raw_text = re.sub(r'```json\n?', '', raw_text)
         raw_text = re.sub(r'```\n?', '', raw_text)
         
-        # Fallback safeguard: if Gemini still returns relative grounding-api-redirect URLs, 
-        # prepend the domain so it actually resolves correctly.
         raw_text = re.sub(r'(["\']|\[.*?\]\()/grounding-api-redirect/', r'\1https://www.google.com/search/grounding-api-redirect/', raw_text)
-        
         raw_text = raw_text.strip()
         
         try:
@@ -105,18 +99,18 @@ def run_research_agent(topic):
                 "summary": data.get("summary", "No summary generated."),
                 "resources": data.get("resources", [])
             }
-        except json.JSONDecodeError as e:
-            logger.error(f"JSON Parsing Error: {e}. Raw Text: {raw_text}")
+        except json.JSONDecodeError:
+            logger.error("JSON Parsing Error in research agent")
             return {
                 "topic": topic,
                 "summary": "Failed to parse the AI response. Please try again.",
                 "resources": []
             }
 
-    except Exception as e:
-        logger.error(f"Error during research agent execution: {e}")
+    except Exception:
+        logger.error("Error during research agent execution")
         return {
             "topic": topic,
-            "summary": f"An error occurred during research: {e}",
+            "summary": "An error occurred during research. Please try again later.",
             "resources": []
         }

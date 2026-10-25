@@ -1,0 +1,19 @@
+{
+  "name": "aidube",
+  "version": "1.0.0",
+  "description": "Aidube - Smart Learning Web App",
+  "type": "module",
+  "scripts": {
+    "start": "python app.py",
+    "test": "node --test"
+  },
+  "keywords": [
+    "education",
+    "ai",
+    "learning",
+    "gemini",
+    "youtube"
+  ],
+  "author": "Ainaan Raza",
+  "license": "MIT"
+}

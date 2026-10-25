@@ -87,8 +87,9 @@ def fetch_from_invidious(video_id):
     return None
 
 @app.route('/transcript/<video_id>', methods=['GET'])
-
 def get_transcript(video_id):
+    if not video_id or not re.match(r'^[a-zA-Z0-9_-]{11}$', video_id):
+        return jsonify({"error": "Invalid video_id format"}), 400
     try:
         logging.info(f"Fetching transcript for video: {video_id}")
         
@@ -196,9 +197,12 @@ def verify_recaptcha():
              return jsonify({'success': False, 'error': 'No token provided'}), 400
 
         # reCAPTCHA Enterprise Configuration
-        project_id = "aidube"
-        site_key = "6LcL004sAAAAALsn74XuPBG2bSC19YId79_PT6rB"
-        api_key = "AIzaSyDFkjR_NuVsXkB13M7oVTzqWq-ukvtx5dU"
+        project_id = os.environ.get("RECAPTCHA_PROJECT_ID", "aidube")
+        site_key = os.environ.get("RECAPTCHA_SITE_KEY", "6LcL004sAAAAALsn74XuPBG2bSC19YId79_PT6rB")
+        api_key = os.environ.get("RECAPTCHA_API_KEY", "")
+        
+        if not api_key:
+            return jsonify({'success': False, 'error': 'reCAPTCHA server configuration missing'}), 500
         
         verify_url = f"https://recaptchaenterprise.googleapis.com/v1/projects/{project_id}/assessments?key={api_key}"
         
@@ -226,17 +230,11 @@ def verify_recaptcha():
             return jsonify({'success': False, 'error': result.get('tokenProperties', {}).get('invalidReason')}), 400
             
     except Exception as e:
-        logging.error(f"Recaptcha verification failed: {e}")
-        return jsonify({'error': str(e)}), 500
+        logging.error("Recaptcha verification failed")
+        return jsonify({'success': False, 'error': 'reCAPTCHA verification failed. Please try again.'}), 500
 
 # Check for main execution is not required in serverless environment
 
-@app.route('/api/config', methods=['GET'])
-def get_config():
-    env_keys_str = os.environ.get("GEMINI_API_KEYS", os.environ.get("GEMINI_API_KEY", ""))
-    env_keys_str = env_keys_str.replace('"', '').replace("'", "")
-    keys = [k.strip() for k in env_keys_str.split(",") if k.strip()]
-    return jsonify({"gemini_keys": keys}), 200
 
 @app.route('/api/research', methods=['POST'])
 def research_topic():
@@ -244,10 +242,13 @@ def research_topic():
     if not data or 'topic' not in data:
         return jsonify({"error": "Missing 'topic' in request body"}), 400
     
-    topic = data['topic']
+    topic = str(data.get('topic', '')).strip()[:200]
+    if not topic:
+        return jsonify({"error": "Missing 'topic' in request body"}), 400
+
     try:
         result = run_research_agent(topic)
         return jsonify(result)
     except Exception as e:
-        logging.error(f"Error in research agent: {e}")
-        return jsonify({"error": str(e)}), 500
+        logging.error("Error in research agent")
+        return jsonify({"error": "Research operation failed. Please try again later."}), 500

@@ -1,69 +1,65 @@
 import { auth, db } from "./firebase.js";
 import { doc, getDoc, setDoc, updateDoc, increment } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-firestore.js";
 
-// Configuration
-const YOUTUBE_API_KEYS = [
-    "AIzaSyB8qZ_7Z7miBrUeo2cRDE6aPwyhe5TVCo8",
-    "AIzaSyAJ3HiYC9gPEEv5w7AoGa4lGuap7bp-ulE",
-    "AIzaSyDrdKBBnrBCPqHKkyR3DRHt7EIyf_-mq3U"
-];
+// Secure Backend API Helpers
+const BACKEND_BASE = "";
 
-let GEMINI_API_KEYS = [
-    "AIzaSyCxmH2scV8KDS3TTKju8YnRSQdsOjmbyMI",
-    "AIzaSyAXh5mE52qyJuIyv8QjMpx6CRWQb363wZ0",
-    "AIzaSyDzmaqaK8K-VQrdlfA2L8j3af6wZ06HH4w",
-    "AIzaSyAcaoCV_IhsD61HrYWewecC0Mpeys0LrbE",
-    "AIzaSyCokZX00LfxiJ6XSukz2Ajd9T6Zk-N_USo"
-];
-
-let configFetched = false;
-
-async function ensureConfig() {
-    if (configFetched) return;
-    try {
-        const apiUrl = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
-            ? 'http://localhost:5000/api/config' 
-            : '/api/config';
-        console.log("Fetching API config from:", apiUrl);
-        const res = await fetch(apiUrl);
-        if (res.ok) {
-            const data = await res.json();
-            if (data.gemini_keys && data.gemini_keys.length > 0) {
-                console.log("Successfully fetched config with", data.gemini_keys.length, "keys.");
-                GEMINI_API_KEYS = data.gemini_keys;
-            } else {
-                console.warn("Config fetched but no keys found in response:", data);
-            }
-        } else {
-            console.warn(`Server responded with ${res.status}: ${res.statusText}`);
+/**
+ * Calls the secure backend YouTube API endpoint
+ * @param {string} action - 'searchPlaylists' | 'playlistItems' | 'videoDetails' | 'playlistDetails'
+ * @param {object} params - query parameters or payload
+ */
+export async function callYouTubeApi(action, params = {}) {
+    const url = new URL("/api/youtube", window.location.origin);
+    url.searchParams.set("action", action);
+    for (const [key, val] of Object.entries(params)) {
+        if (val !== undefined && val !== null) {
+            url.searchParams.set(key, String(val));
         }
-    } catch (e) {
-        console.error("Network Error: Could not fetch config from server. Using fallback keys. Are you running the Flask backend? Error:", e);
     }
-    configFetched = true;
+
+    const res = await fetch(url.toString(), {
+        method: "GET",
+        headers: { "Accept": "application/json" }
+    });
+
+    if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.error || `YouTube API error: ${res.status}`);
+    }
+
+    return await res.json();
 }
 
-let currentYouTubeKeyIndex = 0;
-let currentGeminiKeyIndex = 0;
+/**
+ * Calls the secure backend Gemini API endpoint
+ * @param {string} action - 'generate' | 'test' | 'roadmap' | 'subtopics' | 'research'
+ * @param {object} payload - action-specific parameters
+ */
+export async function callGeminiApi(action, payload = {}) {
+    const res = await fetch("/api/gemini", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            "Accept": "application/json"
+        },
+        body: JSON.stringify({ action, ...payload })
+    });
 
-export function getYouTubeApiKey() {
-    return YOUTUBE_API_KEYS[currentYouTubeKeyIndex];
+    if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.error || `Gemini API error: ${res.status}`);
+    }
+
+    return await res.json();
 }
 
-export function rotateYouTubeKey() {
-    currentYouTubeKeyIndex = (currentYouTubeKeyIndex + 1) % YOUTUBE_API_KEYS.length;
-    // Rotating YouTube API Key
-}
+// Deprecated legacy stubs to prevent breaking any third-party or uncaught calls
+export function getYouTubeApiKey() { return null; }
+export function rotateYouTubeKey() { }
+export async function getGeminiApiKey() { return null; }
+export function rotateGeminiKey() { }
 
-export async function getGeminiApiKey() {
-    await ensureConfig();
-    return GEMINI_API_KEYS[currentGeminiKeyIndex];
-}
-
-export function rotateGeminiKey() {
-    currentGeminiKeyIndex = (currentGeminiKeyIndex + 1) % GEMINI_API_KEYS.length;
-    // Rotating Gemini API Key
-}
 
 // Validation
 export function isValidPlaylistId(id) {
